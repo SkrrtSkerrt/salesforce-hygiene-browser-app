@@ -1,0 +1,26 @@
+{
+  "name": "salesforce-hygiene-browser-app",
+  "version": "0.0.0-a5-local-prep",
+  "private": true,
+  "description": "Static no-upload Salesforce Hygiene browser app scaffold with local publication-prep checks.",
+  "type": "module",
+  "files": [
+    ".github/ISSUE_TEMPLATE/browser-app-feedback.yml",
+    "docs/",
+    "src/",
+    "tests/",
+    "index.html",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "test:boundary": "node tests/static-boundary-check.mjs",
+    "test:classifier": "node tests/test-file-classifier.mjs",
+    "test:validation": "node tests/test-validation-rule-checks.mjs",
+    "test:export": "node tests/test-report-exporter.mjs",
+    "test:public-copy": "node tests/test-public-copy.mjs",
+    "test:redaction": "node tests/test-redaction-sweep.mjs",
+    "test:publication-prep": "node tests/test-publication-prep.mjs",
+    "test": "npm run test:classifier && npm run test:validation && npm run test:export && npm run test:public-copy && npm run test:redaction && npm run test:publication-prep && npm run test:boundary"
+  }
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Salesforce Hygiene Browser App - Local Prep Scaffold</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101214; color: #f2eee8; }
+    body { margin: 0; padding: 2rem; }
+    main { max-width: 980px; margin: 0 auto; display: grid; gap: 1.25rem; }
+    .panel { border: 1px solid #3d464f; border-radius: 14px; padding: 1rem; background: #171b1f; }
+    .boundary { border-color: #66d9a8; background: #122019; }
+    button, input { font: inherit; }
+    .muted { color: #b9c0c7; }
+    code { background: #22282e; padding: .1rem .25rem; border-radius: 4px; }
+    .inputs { display: grid; gap: .75rem; }
+    label { display: grid; gap: .35rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { border-top: 1px solid #303941; padding: .5rem; text-align: left; vertical-align: top; }
+    th { color: #d8f6e7; }
+    .finding { border-top: 1px solid #303941; padding-block: .75rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>Salesforce Hygiene Browser App</h1>
+      <p class="muted">Local prep scaffold. Static, local-only ValidationRule XML check plus local report downloads. Public copy and publication prep are staged locally only. No uploads, no OAuth, no analytics.</p>
+    </section>
+
+    <section class="panel boundary" aria-labelledby="boundary-title">
+      <h2 id="boundary-title">No-upload MVP boundary</h2>
+      <p>Your Salesforce metadata is processed in this browser tab. This scaffold does not upload files, reports, or scan results to a server.</p>
+      <ul>
+        <li>No Salesforce login.</li>
+        <li>No OAuth.</li>
+        <li>No analytics.</li>
+        <li>No server upload.</li>
+        <li>No scan-data persistence.</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="input-title">
+      <h2 id="input-title">Local fixture selection</h2>
+      <p class="muted">A2 classifies local files and runs one browser rule on directly selected ValidationRule XML. ZIP entries remain classification-only. Use fictional fixtures only.</p>
+      <div class="inputs">
+        <label>
+          Select metadata files or a ZIP
+          <input id="metadataFiles" type="file" multiple aria-describedby="input-help">
+        </label>
+        <label>
+          Select a metadata folder
+          <input id="metadataFolder" type="file" multiple webkitdirectory directory>
+        </label>
+      </div>
+      <p id="input-help" class="muted">A2 emits findings only for the exact fictional ValidationRule blank-description condition.</p>
+      <output id="fileSummary" for="metadataFiles metadataFolder">No files selected.</output>
+    </section>
+
+    <section class="panel" aria-labelledby="result-title">
+      <h2 id="result-title">Scan status</h2>
+      <p id="scanStatus">Scanner adapter not implemented.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="limitations-title">
+      <h2 id="limitations-title">Limitations</h2>
+      <div id="limitationsRows"><p class="muted">No run limitations yet.</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="findings-title">
+      <h2 id="findings-title">Findings</h2>
+      <div id="findingsRows"><p class="muted">No findings yet.</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="download-title">
+      <h2 id="download-title">Download local report</h2>
+      <p class="muted">Downloads are generated in this browser tab as local blobs. Nothing is uploaded.</p>
+      <button id="downloadJson" type="button" disabled>Download JSON report</button>
+      <button id="downloadHtml" type="button" disabled>Download HTML report</button>
+    </section>
+
+    <section class="panel" aria-labelledby="coverage-title">
+      <h2 id="coverage-title">Coverage rows</h2>
+      <div id="coverageRows"><p class="muted">No coverage rows yet.</p></div>
+    </section>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
