@@ -76,6 +76,15 @@ for (const required of [
   if (!issueTemplate.includes(required)) failures.push(`issue template missing required warning: ${required}`);
 }
 
+for (const required of [
+  'Try it: no Salesforce CLI needed',
+  'Fictional_Blank_Description',
+  'ask your Salesforce admin or dev team for a small ZIP containing ValidationRule metadata only',
+  'Not Assessed means the file was recognized but no current browser rule ran on it',
+]) {
+  if (!index.includes(required)) failures.push(`index missing user walkthrough phrase: ${required}`);
+}
+
 if (/fetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|serviceWorker\.register|localStorage|sessionStorage|indexedDB/.test(index)) {
   failures.push('index.html contains denied runtime API pattern');
 }

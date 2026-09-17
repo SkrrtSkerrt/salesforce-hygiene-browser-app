@@ -14,6 +14,16 @@ No Salesforce login. No server upload. No analytics. No scan-data storage.
 
 Select Salesforce metadata files from your machine and get a point-in-time local report. The current browser MVP checks a narrow ValidationRule condition and shows unsupported metadata as coverage rows instead of pretending to scan everything.
 
+## How to try it
+
+1. Open the static GitHub Pages app.
+2. For a 30-second synthetic test, save the fictional XML sample on the page as `Fictional.validationRule-meta.xml`, then select it. One blank-description finding should appear.
+3. For real metadata without Salesforce CLI, use a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
+4. If the user does not have metadata yet, tell them to ask an admin or dev team for a small ZIP containing ValidationRule metadata only. The browser app cannot inspect an org by itself.
+5. Select the ZIP, folder, or XML files in the page.
+6. Read Limitations first, then Coverage rows, then Findings.
+7. Download the JSON or HTML report for local evidence.
+
 ## Trust boundary
 
 Your files stay in your browser tab. The app does not upload metadata, reports, filenames, scan results, telemetry, or local labels to a server.

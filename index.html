@@ -19,6 +19,9 @@
     th, td { border-top: 1px solid #303941; padding: .5rem; text-align: left; vertical-align: top; }
     th { color: #d8f6e7; }
     .finding { border-top: 1px solid #303941; padding-block: .75rem; }
+    .steps { margin: 0; padding-left: 1.25rem; display: grid; gap: .7rem; }
+    .sample { overflow-x: auto; white-space: pre; background: #0e1114; border: 1px solid #303941; border-radius: 10px; padding: .75rem; }
+    .callout { border-left: 4px solid #66d9a8; padding-left: .75rem; }
   </style>
 </head>
 <body>
@@ -40,9 +43,33 @@
       </ul>
     </section>
 
+    <section class="panel" aria-labelledby="try-title">
+      <h2 id="try-title">Try it: no Salesforce CLI needed</h2>
+      <ol class="steps">
+        <li><strong>Fast test:</strong> create a local file named <code>Fictional.validationRule-meta.xml</code> with the sample below, then select it here. You should see one blank-description finding.</li>
+        <li><strong>Real metadata without CLI:</strong> use a metadata ZIP or source folder you already have from an admin, release package, backup, or Git repo. Look for files ending in <code>.validationRule-meta.xml</code>.</li>
+        <li><strong>If you do not have metadata yet:</strong> ask your Salesforce admin or dev team for a small ZIP containing ValidationRule metadata only. This app cannot inspect an org by itself.</li>
+        <li><strong>Run the check:</strong> select a ZIP, folder, or individual XML files. The browser reads them locally and shows Limitations, Coverage rows, and Findings.</li>
+        <li><strong>Read the result:</strong> Not Assessed means the file was recognized but no current browser rule ran on it. Rejected means the file or ZIP entry was unsafe or unsupported.</li>
+        <li><strong>Save evidence:</strong> use Download JSON report or Download HTML report. The download is generated in this tab.</li>
+      </ol>
+      <details>
+        <summary>Fictional sample file for a 30-second test</summary>
+        <p class="muted">Use this only as synthetic test data. Do not include credentials, org IDs, customer names, logs, screenshots, report content, filenames, or local paths in public feedback.</p>
+        <pre class="sample">&lt;ValidationRule xmlns="urn:metadata.tooling.soap.sforce.com"&gt;
+  &lt;fullName&gt;Fictional_Blank_Description&lt;/fullName&gt;
+  &lt;active&gt;true&lt;/active&gt;
+  &lt;description&gt;&lt;/description&gt;
+  &lt;errorConditionFormula&gt;ISBLANK(Name)&lt;/errorConditionFormula&gt;
+  &lt;errorMessage&gt;Name is required&lt;/errorMessage&gt;
+&lt;/ValidationRule&gt;</pre>
+      </details>
+      <p class="muted callout">Optional CLI users can retrieve metadata outside this app, then select the resulting local files or ZIP here. The page itself never logs in to Salesforce.</p>
+    </section>
+
     <section class="panel" aria-labelledby="input-title">
-      <h2 id="input-title">Local fixture selection</h2>
-      <p class="muted">The current beta classifies local files and runs one browser rule on directly selected ValidationRule XML plus bounded client-only ZIP entries. Use fictional fixtures for testing.</p>
+      <h2 id="input-title">Select local metadata</h2>
+      <p class="muted">The current beta classifies local files and runs one browser rule on directly selected ValidationRule XML plus bounded client-only ZIP entries. Use fictional fixtures for public testing.</p>
       <div class="inputs">
         <label>
           Select metadata files or a ZIP

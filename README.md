@@ -23,6 +23,16 @@ Implemented rule:
 
 - `VALIDATION-001-BROWSER` - direct `description` element exists but is blank.
 
+## Try it on the GitHub Pages app
+
+1. Open the GitHub Pages app.
+2. For a 30-second synthetic test, save the fictional XML sample shown on the page as `Fictional.validationRule-meta.xml`, then select it. One blank-description finding should appear.
+3. For real metadata without Salesforce CLI, use a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
+4. If you do not have metadata yet, ask an admin or dev team for a small ZIP containing ValidationRule metadata only. The browser app cannot inspect an org by itself.
+5. Select the ZIP, folder, or XML files in the page.
+6. Read Limitations first, then Coverage rows, then Findings.
+7. Download the JSON or HTML report if you need local evidence.
+
 ## Verify boundary and classifier
 
 ```bash
