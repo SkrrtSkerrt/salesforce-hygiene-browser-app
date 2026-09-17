@@ -17,7 +17,7 @@ Static browser-only public beta for the free Salesforce Hygiene app.
 
 ## Current state
 
-Public beta. It classifies selected local files, folders, and ZIP entry names into coverage rows. It runs one browser-native ValidationRule XML check on directly selected local files only. ZIP entries remain classification-only until a later authorized decompression slice. It can download JSON and HTML reports from the current in-memory browser result using local blobs only.
+Public beta. It classifies selected local files, folders, and ZIP entry names into coverage rows. It runs one browser-native ValidationRule XML check on directly selected local files and bounded client-only ZIP entries. It can download JSON and HTML reports from the current in-memory browser result using local blobs only.
 
 Implemented rule:
 
@@ -47,4 +47,4 @@ The app is published as a static GitHub Pages beta. Do not add hosted upload, au
 
 ## Next slice
 
-Keep the public beta narrow: ZIP entries are classification-only, unsupported metadata is Not Assessed, and findings are limited to the implemented ValidationRule check. A later gate must explicitly authorize decompression, more rule families, hosted intake, analytics, customer-data handling, or any stronger assurance/compliance claim.
+Keep the public beta narrow: ZIP extraction is client-only and bounded, unsupported metadata is Not Assessed, and findings are limited to the implemented ValidationRule check. A later gate must explicitly authorize more rule families, hosted intake, analytics, customer-data handling, or any stronger assurance/compliance claim.

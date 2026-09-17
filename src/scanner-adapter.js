@@ -4,7 +4,7 @@ import { evaluateValidationDescription, VALIDATION_001_BROWSER } from './validat
 export async function classifySelectedFiles(fileList) {
   const files = Array.from(fileList || []);
   const classification = await classifyFiles(files);
-  const ruleResults = await runBrowserRules(files, classification.coverage);
+  const ruleResults = await runBrowserRules(files, classification.coverage, classification.archiveTextEntries || []);
   const findings = ruleResults.map((result) => result.finding).filter(Boolean);
   const ruleCoverage = ruleResults.map((result) => result.coverage).filter(Boolean);
   const coverage = [...classification.coverage, ...ruleCoverage];
@@ -22,8 +22,8 @@ export async function classifySelectedFiles(fileList) {
     findings,
     coverage,
     limitations: [
-      'The public beta evaluates one browser ValidationRule XML check against directly selected local files only.',
-      'ZIP entries remain classification-only until a separately authorized decompression slice.',
+      'The public beta evaluates one browser ValidationRule XML check against directly selected local files and bounded client-side ZIP entries.',
+      'Client-only bounded ZIP content extraction is limited by archive size, entry count, per-entry size, total extracted text size, and safe relative paths.',
       'Unsupported files become coverage rows instead of silent omissions.',
       VALIDATION_001_BROWSER.limitation,
     ],
@@ -49,14 +49,17 @@ export function createEmptyScanResult({ fileCount = 0 } = {}) {
   };
 }
 
-async function runBrowserRules(files, coverageRows) {
+async function runBrowserRules(files, coverageRows, archiveTextEntries) {
   const byPath = new Map(files.map((file) => [file.webkitRelativePath || file.name, file]));
+  const archiveTextBySourcePath = new Map(archiveTextEntries.map((entry) => [`${entry.source}\u0000${entry.path}`, entry.text]));
   const results = [];
 
   for (const row of coverageRows) {
     if (row.metadataType !== 'ValidationRule') continue;
     if (row.source !== 'selection') {
-      results.push(evaluateValidationDescription({ path: row.path, source: row.source, text: '' }));
+      const text = archiveTextBySourcePath.get(`${row.source}\u0000${row.path}`);
+      if (typeof text !== 'string') continue;
+      results.push(evaluateValidationDescription({ path: row.path, source: row.source, text }));
       continue;
     }
     const file = byPath.get(row.path);

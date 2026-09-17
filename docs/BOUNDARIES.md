@@ -7,6 +7,7 @@ This public beta keeps Salesforce metadata checks inside a static browser-only b
 - Static HTML/CSS/JS.
 - Browser File API.
 - In-memory file summaries, parsing, coverage rows, and findings.
+- Client-only bounded ZIP content extraction for safe relative entries.
 - Local JSON/HTML report downloads generated with browser blobs only.
 - GitHub Pages static deployment.
 - GitHub issue-template feedback without scan-data, filename, local-path, metadata, or report prefill.
@@ -17,6 +18,7 @@ This public beta keeps Salesforce metadata checks inside a static browser-only b
 
 - `fetch`, XHR, WebSocket, EventSource, beacon.
 - Remote CDN assets.
+- ZIP absolute paths, traversal paths, encrypted entries, unsupported compression methods, over-limit archives, over-limit entry counts, and over-limit extracted text.
 - Analytics.
 - Service worker.
 - localStorage/sessionStorage/IndexedDB for scan data.

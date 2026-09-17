@@ -3,15 +3,11 @@ export const VALIDATION_001_BROWSER = {
   title: 'Validation rule missing description',
   severity: 'low',
   confidence: 'medium',
-  limitation: 'Browser VALIDATION-001 checks only selected local ValidationRule XML files with exactly one direct description element; review business intent manually.',
+  limitation: 'Browser VALIDATION-001 checks local ValidationRule XML files from direct selection or bounded client-side ZIP extraction with exactly one direct description element; review business intent manually.',
 };
 
 export function evaluateValidationDescription({ path, source = 'selection', text }) {
   const sourceRef = buildSource(path, text, '<description');
-
-  if (source !== 'selection') {
-    return ruleCoverage(path, source, 'Not Assessed', 'zip-content-not-assessed', 'ZIP entry content is classification-only in A2.', sourceRef);
-  }
 
   const parsed = parseValidationRuleXml(text);
   if (!parsed.ok) {

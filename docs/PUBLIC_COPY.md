@@ -24,8 +24,8 @@ The MVP does not use Salesforce OAuth, Salesforce CLI, Metadata API, Tooling API
 
 - Accepts local file, folder, and ZIP selection through the Browser File API.
 - Classifies supported, unsupported, and rejected inputs.
-- Runs `VALIDATION-001-BROWSER` only on directly selected local `*.validationRule-meta.xml` files.
-- Keeps ZIP contents classification-only until a later authorized decompression slice.
+- Runs `VALIDATION-001-BROWSER` only on directly selected local `*.validationRule-meta.xml` files and bounded client-only ZIP entries.
+- Rejects or skips ZIP entries that are absolute, traversal-based, encrypted, unsupported, or over the browser A7 size/count limits.
 - Downloads local JSON and HTML reports with browser blobs.
 - Shows limitations and coverage before findings.
 

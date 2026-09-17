@@ -1,8 +1,9 @@
-const TOOL_VERSION = 'browser-a3-v0';
+const TOOL_VERSION = 'browser-a7-v0';
+const REPORT_SCHEMA_VERSION = 'browser-report-a3-v0'; // A7 keeps the A3 report shape for compatible local downloads.
 
 export function buildJsonReport(result, { generatedAt = new Date().toISOString() } = {}) {
   return {
-    schema_version: 'browser-report-a3-v0',
+    schema_version: REPORT_SCHEMA_VERSION,
     tool_version: TOOL_VERSION,
     generated_at_local: generatedAt,
     processing_model: result.processingModel,
@@ -147,7 +148,7 @@ function renderList(items) {
 function sanitizeReportPath(value) {
   const text = String(value || '');
   const normalized = text.replaceAll('\\', '/');
-  if (text.startsWith('/') || text.startsWith('\\') || /^[A-Za-z]:[\\/]/.test(text)) {
+  if (text.startsWith('/') || text.startsWith('\\') || /^[A-Za-z]:[\\/]/.test(text) || normalized.startsWith('home/') || /^[A-Za-z]:\/Users\//i.test(normalized)) {
     return normalized.split('/').filter(Boolean).pop() || 'unknown-entry';
   }
   return normalized

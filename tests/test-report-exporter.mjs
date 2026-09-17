@@ -14,8 +14,8 @@ const result = {
   },
   rulesEvaluated: ['VALIDATION-001-BROWSER'],
   limitations: [
-    'The public beta evaluates one browser ValidationRule XML check against directly selected local files only.',
-    'Browser VALIDATION-001 checks only selected local ValidationRule XML files with exactly one direct description element; review business intent manually.',
+    'The public beta evaluates one browser ValidationRule XML check against directly selected local files and bounded client-side ZIP entries.',
+    'Browser VALIDATION-001 checks local ValidationRule XML files from direct selection or bounded client-side ZIP extraction with exactly one direct description element; review business intent manually.',
   ],
   findings: [{
     findingId: 'finding-test',
@@ -38,7 +38,7 @@ const result = {
 
 const json = buildJsonReport(result, { generatedAt: '2026-09-14T00:00:00.000Z' });
 assert.equal(json.schema_version, 'browser-report-a3-v0');
-assert.equal(json.tool_version, 'browser-a3-v0');
+assert.equal(json.tool_version, 'browser-a7-v0');
 assert.equal(json.processing_model, 'browser-only-no-upload');
 assert.equal(json.findings.length, 1);
 assert.equal(json.findings[0].source.path, 'objects/Account/validationRules/Fictional.validationRule-meta.xml');
@@ -63,6 +63,8 @@ const absoluteUnix = buildJsonReport({ ...result, findings: [{ ...result.finding
 const absoluteWindows = buildJsonReport({ ...result, findings: [{ ...result.findings[0], source: { path: windowsAbsoluteFixture, startLine: 1, endLine: 1 } }], coverage: [] });
 assert.equal(absoluteUnix.findings[0].source.path, 'Fictional.validationRule-meta.xml');
 assert.equal(absoluteWindows.findings[0].source.path, 'Fictional.validationRule-meta.xml');
+const preSanitizedAbsoluteCoverage = buildJsonReport({ ...result, findings: [], coverage: [{ status: 'Rejected', path: ['home', '/josh/org/Fictional.validationRule-meta.xml'].join(''), reason: 'Absolute-looking paths are outside browser scope' }] });
+assert.equal(preSanitizedAbsoluteCoverage.coverage[0].path, 'Fictional.validationRule-meta.xml');
 
 const jsonBlob = createReportBlob(result, 'json', { generatedAt: '2026-09-14T00:00:00.000Z' });
 const htmlBlob = createReportBlob(result, 'html', { generatedAt: '2026-09-14T00:00:00.000Z' });

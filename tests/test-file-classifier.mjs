@@ -18,7 +18,10 @@ assert.equal(classifyPath('secret.zip').status, 'Rejected');
 assert.equal(classifyPath('nested.zip', 'archive:outer.zip').status, 'Rejected');
 assert.equal(classifyPath(unixAbsoluteFixture).status, 'Rejected');
 assert.equal(classifyPath(windowsAbsoluteFixture).status, 'Rejected');
+assert.equal(classifyPath(unixAbsoluteFixture).path, 'Fictional.validationRule-meta.xml');
+assert.equal(classifyPath(windowsAbsoluteFixture).path, 'Fictional.validationRule-meta.xml');
 assert.equal(classifyPath('../secret.env').status, 'Rejected');
+assert.equal(classifyPath('../secret.env').path, 'secret.env');
 assert.equal(classifyPath('/tmp/export/customers.csv').status, 'Rejected');
 assert.equal(classifyPath('settings/Fictional.settings-meta.xml').status, 'Not Assessed');
 assert.equal(classifyPath('readme.txt').status, 'Unsupported');
@@ -50,6 +53,8 @@ const absoluteEntries = extractZipEntryNames(absoluteZip);
 assert.equal(absoluteEntries[0], unixAbsoluteFixture);
 assert.equal(classifyPath(absoluteEntries[0], 'archive:absolute.zip').status, 'Rejected');
 assert.equal(classifyPath(absoluteEntries[1], 'archive:absolute.zip').status, 'Rejected');
+assert.equal(classifyPath(absoluteEntries[0], 'archive:absolute.zip').path, 'Fictional.validationRule-meta.xml');
+assert.equal(classifyPath(absoluteEntries[1], 'archive:absolute.zip').path, 'Fictional.validationRule-meta.xml');
 
 console.log('file classifier tests passed');
 

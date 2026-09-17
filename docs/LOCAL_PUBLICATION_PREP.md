@@ -65,4 +65,4 @@ Stop before any public beta update if any check finds:
 
 ## Next gate
 
-A later exact gate must name any expanded beta action explicitly before decompression, additional rule families, hosted intake, analytics, Salesforce API/CLI access, customer-data handling, package-registry publication, or stronger assurance/compliance claims.
+A later exact gate must name any expanded beta action explicitly before additional rule families, hosted intake, analytics, Salesforce API/CLI access, customer-data handling, package-registry publication, or stronger assurance/compliance claims.
