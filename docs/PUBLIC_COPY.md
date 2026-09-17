@@ -1,6 +1,6 @@
 # Public Copy Packet
 
-Use this copy when the A4 site integration is later authorized for a public static page. This is copy only; it does not authorize a public repo, deploy, analytics, hosted uploads, or customer-data handling.
+Use this copy for the public static beta page. This copy does not authorize analytics, hosted uploads, external processing, customer-data handling, or stronger assurance/compliance claims.
 
 ## Hero
 

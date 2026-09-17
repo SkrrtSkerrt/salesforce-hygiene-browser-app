@@ -1,11 +1,11 @@
-# Static Site Integration Plan
+# Static Site Integration
 
-A4 planning only. Deployment is not authorized.
+Public beta deployment is active on GitHub Pages.
 
 ## Target shape
 
 - Static files served from the app root.
-- No build step required for the current scaffold.
+- No build step required for the current beta.
 - No server intake route.
 - No hosted upload endpoint.
 - No analytics script.
@@ -13,9 +13,9 @@ A4 planning only. Deployment is not authorized.
 - No service worker.
 - No runtime persistence for scan data.
 
-## Candidate public route
+## Public route
 
-Use one static route for the browser app after a later publish gate:
+The browser app is published at:
 
 - `/salesforce-hygiene-browser-app/`
 
@@ -30,17 +30,17 @@ The public entry must show the trust boundary before file selection:
 3. No server upload.
 4. No analytics or telemetry.
 5. Unsupported metadata appears as Not Assessed coverage.
-6. The current MVP is narrow and point-in-time only.
+6. The current beta is narrow and point-in-time only.
 
 ## Feedback route
 
-Use GitHub issues only after public repo authorization. The app must not auto-open or auto-prefill an issue URL with scan data, filenames, findings, org names, report content, telemetry, local paths, or local labels.
+Use GitHub issues only. The app must not auto-open or auto-prefill an issue URL with scan data, filenames, findings, org names, report content, telemetry, local paths, or local labels.
 
 Any feedback link must be a plain link to the repository issue page or a manually filled issue template. No query-string prefill from runtime state.
 
-## Pre-publish checklist
+## Release checklist
 
-Run these checks before any later publish/deploy authorization:
+Run these checks before public beta updates:
 
 1. `npm test`
 2. Runtime deny-pattern scan for network and persistence APIs.
@@ -48,8 +48,8 @@ Run these checks before any later publish/deploy authorization:
 4. Browser network check: no requests after initial static file load during selection, scan, and download.
 5. Public copy review: no hosted-processing, auth, completeness, compliance, or official-Salesforce claims.
 6. Issue-template review: no request for metadata, source, org IDs, screenshots, logs, credentials, tokens, URLs, reports, filenames, or local paths.
-7. Secret/private-data scan before first public commit.
+7. Secret/private-data scan before public commits.
 
 ## Stop conditions
 
-Stop before publishing if the implementation requires any hosted intake, Salesforce auth, API access, telemetry, analytics, remote assets, scan-data persistence, customer data, external LLM/subprocessor, or public claim stronger than local point-in-time hygiene.
+Stop before release changes if the implementation requires any hosted intake, Salesforce auth, API access, telemetry, analytics, remote assets, scan-data persistence, customer data, external LLM/subprocessor, or public claim stronger than local point-in-time hygiene.

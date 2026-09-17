@@ -4,14 +4,14 @@ import { evaluateValidationDescription, VALIDATION_001_BROWSER } from './validat
 export async function classifySelectedFiles(fileList) {
   const files = Array.from(fileList || []);
   const classification = await classifyFiles(files);
-  const ruleResults = await runA2Rules(files, classification.coverage);
+  const ruleResults = await runBrowserRules(files, classification.coverage);
   const findings = ruleResults.map((result) => result.finding).filter(Boolean);
   const ruleCoverage = ruleResults.map((result) => result.coverage).filter(Boolean);
   const coverage = [...classification.coverage, ...ruleCoverage];
   const counts = countStatuses(coverage);
 
   return {
-    schemaVersion: 'browser-a2-v0',
+    schemaVersion: 'browser-public-beta-result-v0',
     processingModel: 'browser-only-no-upload',
     inputSummary: {
       selectedFileCount: classification.selectedEntryCount,
@@ -22,7 +22,7 @@ export async function classifySelectedFiles(fileList) {
     findings,
     coverage,
     limitations: [
-      'A2 evaluates one browser ValidationRule XML check against directly selected local files only.',
+      'The public beta evaluates one browser ValidationRule XML check against directly selected local files only.',
       'ZIP entries remain classification-only until a separately authorized decompression slice.',
       'Unsupported files become coverage rows instead of silent omissions.',
       VALIDATION_001_BROWSER.limitation,
@@ -32,7 +32,7 @@ export async function classifySelectedFiles(fileList) {
 
 export function createEmptyScanResult({ fileCount = 0 } = {}) {
   return {
-    schemaVersion: 'browser-scaffold-v0',
+    schemaVersion: 'browser-public-beta-v0',
     processingModel: 'browser-only-no-upload',
     inputSummary: {
       selectedFileCount: fileCount,
@@ -44,12 +44,12 @@ export function createEmptyScanResult({ fileCount = 0 } = {}) {
     coverage: [],
     limitations: [
       'No local files have been classified yet.',
-      'Use fictional fixtures only until the next rule packet is approved.',
+      'Use fictional fixtures when testing the public beta.',
     ],
   };
 }
 
-async function runA2Rules(files, coverageRows) {
+async function runBrowserRules(files, coverageRows) {
   const byPath = new Map(files.map((file) => [file.webkitRelativePath || file.name, file]));
   const results = [];
 

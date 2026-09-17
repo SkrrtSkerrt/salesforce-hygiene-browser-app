@@ -1,8 +1,8 @@
 {
   "name": "salesforce-hygiene-browser-app",
-  "version": "0.0.0-a5-local-prep",
+  "version": "0.0.0-public-beta",
   "private": true,
-  "description": "Static no-upload Salesforce Hygiene browser app scaffold with local publication-prep checks.",
+  "description": "Static no-upload Salesforce Hygiene browser app public beta with release-boundary checks.",
   "type": "module",
   "files": [
     ".github/ISSUE_TEMPLATE/browser-app-feedback.yml",

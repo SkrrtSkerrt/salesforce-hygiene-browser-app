@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>Salesforce Hygiene Browser App - Local Prep Scaffold</title>
+  <title>Salesforce Hygiene Browser App - Public Beta</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101214; color: #f2eee8; }
     body { margin: 0; padding: 2rem; }
@@ -26,12 +25,12 @@
   <main>
     <section class="panel">
       <h1>Salesforce Hygiene Browser App</h1>
-      <p class="muted">Local prep scaffold. Static, local-only ValidationRule XML check plus local report downloads. Public copy and publication prep are staged locally only. No uploads, no OAuth, no analytics.</p>
+      <p class="muted">Public beta. Static, local-only ValidationRule XML check plus local report downloads. Your files stay in this browser tab. No uploads, no OAuth, no analytics.</p>
     </section>
 
     <section class="panel boundary" aria-labelledby="boundary-title">
       <h2 id="boundary-title">No-upload MVP boundary</h2>
-      <p>Your Salesforce metadata is processed in this browser tab. This scaffold does not upload files, reports, or scan results to a server.</p>
+      <p>Your Salesforce metadata is processed in this browser tab. This public beta does not upload files, reports, or scan results to a server.</p>
       <ul>
         <li>No Salesforce login.</li>
         <li>No OAuth.</li>
@@ -43,7 +42,7 @@
 
     <section class="panel" aria-labelledby="input-title">
       <h2 id="input-title">Local fixture selection</h2>
-      <p class="muted">A2 classifies local files and runs one browser rule on directly selected ValidationRule XML. ZIP entries remain classification-only. Use fictional fixtures only.</p>
+      <p class="muted">The current beta classifies local files and runs one browser rule on directly selected ValidationRule XML. ZIP entries remain classification-only. Use fictional fixtures for testing.</p>
       <div class="inputs">
         <label>
           Select metadata files or a ZIP
@@ -54,13 +53,13 @@
           <input id="metadataFolder" type="file" multiple webkitdirectory directory>
         </label>
       </div>
-      <p id="input-help" class="muted">A2 emits findings only for the exact fictional ValidationRule blank-description condition.</p>
+      <p id="input-help" class="muted">This beta emits findings only for the exact ValidationRule blank-description condition.</p>
       <output id="fileSummary" for="metadataFiles metadataFolder">No files selected.</output>
     </section>
 
     <section class="panel" aria-labelledby="result-title">
       <h2 id="result-title">Scan status</h2>
-      <p id="scanStatus">Scanner adapter not implemented.</p>
+      <p id="scanStatus">No files selected.</p>
     </section>
 
     <section class="panel" aria-labelledby="limitations-title">

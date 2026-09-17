@@ -15,7 +15,7 @@ let currentResult = createEmptyScanResult();
 
 function render(result) {
   currentResult = result;
-  const hasRun = result.schemaVersion !== 'browser-scaffold-v0' && (result.coverage.length || result.findings.length);
+  const hasRun = result.schemaVersion !== 'browser-public-beta-v0' && (result.coverage.length || result.findings.length);
   status.textContent = renderSummary(result);
   limitations.innerHTML = renderLimitations(result);
   coverage.innerHTML = renderCoverageRows(result);
@@ -32,7 +32,7 @@ async function handleSelection(input) {
     return;
   }
 
-  summary.textContent = `${files.length} local file${files.length === 1 ? '' : 's'} selected. Classifying and applying A2 browser rules locally in this browser tab.`;
+  summary.textContent = `${files.length} local file${files.length === 1 ? '' : 's'} selected. Classifying and applying browser beta checks locally in this browser tab.`;
   const result = await classifySelectedFiles(files);
   render(result);
 }

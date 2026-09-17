@@ -50,11 +50,11 @@ for (const required of [
 }
 
 for (const required of [
-  'Deployment is not authorized',
+  'Public beta deployment is active on GitHub Pages',
   'No hosted upload endpoint',
   'No analytics script',
   'No query-string prefill from runtime state',
-  'Secret/private-data scan before first public commit',
+  'Secret/private-data scan before public commits',
 ]) {
   if (!staticPlan.includes(required)) failures.push(`STATIC_SITE_INTEGRATION missing required phrase: ${required}`);
 }

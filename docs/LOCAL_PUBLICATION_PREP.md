@@ -1,18 +1,16 @@
-# A5 Local Publication Prep
+# Public Beta Release Gate Record
 
 ## Status
 
-Local-only prep artifact. No public repo, push, publish, deploy, GitHub Pages change, analytics, hosted upload, OAuth, Salesforce access, customer-data handling, or feedback auto-prefill is authorized by this file.
+Public beta is authorized for the static GitHub Pages app. This record does not authorize analytics, hosted upload, OAuth, Salesforce access, customer-data handling, feedback auto-prefill, package-registry publication, or stronger assurance/compliance claims.
 
 ## Purpose
 
-A5 local publication prep checks whether the current static browser app tree is clean enough to be considered for a later public beta release gate.
-
-This file does not authorize release. It only defines local checks and stop conditions.
+This file records the release gate checks that keep the public beta inside the browser-only no-upload boundary.
 
 ## Public allowlist
 
-Allowed in a later public app repository, after a separate exact publish authorization:
+Allowed in the public app repository:
 
 - `index.html`
 - `src/`
@@ -25,7 +23,7 @@ Allowed in a later public app repository, after a separate exact publish authori
 
 ## Public denylist
 
-Do not include any of these in a later public copy:
+Do not include any of these in the public beta:
 
 - private planning history
 - private milestone state
@@ -39,22 +37,22 @@ Do not include any of these in a later public copy:
 - local machine paths or filenames from a user scan
 - generated report content from real metadata
 
-## Required local checks
+## Required release checks
 
-Run before any later public release authorization:
+Run before public beta updates:
 
 1. `npm test`
 2. static runtime boundary check
 3. public-copy guardrail check
-4. redaction/private-data sweep over the staged public tree
+4. redaction/private-data sweep over the public tree
 5. package allowlist check
-6. local package dry run only: `npm pack --dry-run --json`
-7. private repo redaction scan
-8. independent read-only review
+6. local package dry run: `npm pack --dry-run --json`
+7. private repo redaction scan when private evidence is updated
+8. independent read-only review for boundary-sensitive changes
 
 ## Publication blockers
 
-Stop before any public action if any check finds:
+Stop before any public beta update if any check finds:
 
 - network API usage in runtime code
 - remote scripts, fonts, styles, images, or CDNs
@@ -67,4 +65,4 @@ Stop before any public action if any check finds:
 
 ## Next gate
 
-A later exact gate must name the public action explicitly before any repo creation, commit, push, deploy, Pages configuration, or public URL verification.
+A later exact gate must name any expanded beta action explicitly before decompression, additional rule families, hosted intake, analytics, Salesforce API/CLI access, customer-data handling, package-registry publication, or stronger assurance/compliance claims.

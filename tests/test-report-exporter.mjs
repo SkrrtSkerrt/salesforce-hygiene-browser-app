@@ -5,7 +5,7 @@ const unixAbsoluteFixture = ['/', 'home', '/josh/org/objects/Account/validationR
 const windowsAbsoluteFixture = ['C:', '\\', 'Users', '\\Josh\\org\\objects\\Account\\validationRules\\Fictional.validationRule-meta.xml'].join('');
 
 const result = {
-  schemaVersion: 'browser-a2-v0',
+  schemaVersion: 'browser-public-beta-result-v0',
   processingModel: 'browser-only-no-upload',
   inputSummary: {
     selectedFileCount: 1,
@@ -14,7 +14,7 @@ const result = {
   },
   rulesEvaluated: ['VALIDATION-001-BROWSER'],
   limitations: [
-    'A2 evaluates one browser ValidationRule XML check against directly selected local files only.',
+    'The public beta evaluates one browser ValidationRule XML check against directly selected local files only.',
     'Browser VALIDATION-001 checks only selected local ValidationRule XML files with exactly one direct description element; review business intent manually.',
   ],
   findings: [{

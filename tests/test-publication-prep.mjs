@@ -23,8 +23,8 @@ for (const rel of requiredFiles) {
 }
 
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (pkg.private !== true) failures.push('package.json must remain private for local prep');
-if (!String(pkg.version || '').includes('a5-local-prep')) failures.push('package version must mark A5 local prep');
+if (pkg.private !== true) failures.push('package.json must remain private to block package-registry publication');
+if (!String(pkg.version || '').includes('public-beta')) failures.push('package version must mark public beta');
 
 const expectedFiles = ['.github/ISSUE_TEMPLATE/browser-app-feedback.yml', 'docs/', 'src/', 'tests/', 'index.html', 'README.md', 'package.json'];
 for (const rel of expectedFiles) {
@@ -45,10 +45,10 @@ for (const denied of deniedPackageEntries) {
 
 const prepDoc = readFileSync(join(root, 'docs/LOCAL_PUBLICATION_PREP.md'), 'utf8');
 for (const required of [
-  'No public repo, push, publish, deploy',
-  'local package dry run only',
+  'Public beta is authorized for the static GitHub Pages app',
+  'local package dry run',
   'independent read-only review',
-  'A later exact gate must name the public action explicitly',
+  'A later exact gate must name any expanded beta action explicitly',
 ]) {
   if (!prepDoc.includes(required)) failures.push(`LOCAL_PUBLICATION_PREP missing required phrase: ${required}`);
 }
@@ -74,9 +74,9 @@ function walk(dir) {
 for (const file of walk(root)) {
   const rel = relative(root, file);
   if (/^(?:planning|milestones|evidence|backups|raw|private)(?:\/|$)/i.test(rel)) {
-    failures.push(`private-only path present in scaffold: ${rel}`);
+    failures.push(`private-only path present in public package tree: ${rel}`);
   }
-  if (/(?:^|\/)\.env(?:\.|$)/.test(rel)) failures.push(`env file present in scaffold: ${rel}`);
+  if (/(?:^|\/)\.env(?:\.|$)/.test(rel)) failures.push(`env file present in public package tree: ${rel}`);
 }
 
 if (failures.length) {

@@ -65,13 +65,13 @@ const scanResult = await classifySelectedFiles([
   file('objects/Account/validationRules/Fictional_With_Description.validationRule-meta.xml', negativeXml),
   file('objects/Account/validationRules/notes.txt', 'not metadata'),
 ]);
-assert.equal(scanResult.schemaVersion, 'browser-a2-v0');
+assert.equal(scanResult.schemaVersion, 'browser-public-beta-result-v0');
 assert.deepEqual(scanResult.rulesEvaluated, ['VALIDATION-001-BROWSER']);
 assert.equal(scanResult.findings.length, 1);
 assert.equal(scanResult.findings[0].title, 'Validation rule missing description');
 assert.equal(scanResult.coverage.some((row) => row.status === 'Unsupported' && row.path.endsWith('notes.txt')), true);
 assert.equal(scanResult.coverage.some((row) => row.ruleId === 'VALIDATION-001-BROWSER' && row.status === 'Finding'), true);
-assert.equal(renderLimitations(scanResult).includes('A2 evaluates one browser ValidationRule XML check'), true);
+assert.equal(renderLimitations(scanResult).includes('public beta evaluates one browser ValidationRule XML check'), true);
 
 console.log('validation rule checks passed');
 
