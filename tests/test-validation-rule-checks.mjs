@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { classifySelectedFiles } from '../src/scanner-adapter.js';
 import { renderLimitations } from '../src/report-renderer.js';
 import { evaluateValidationDescription } from '../src/validation-rule-checks.js';
 import { makeZip } from './zip-fixtures.mjs';
+
+const root = new URL('..', import.meta.url).pathname;
 
 const positiveXml = `<?xml version="1.0" encoding="UTF-8"?>
 <ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -21,6 +25,14 @@ const duplicateXml = `<ValidationRule><description></description><description></
 const surrogateXml = `<ValidationRule><errorMessage>Use this text only.</errorMessage></ValidationRule>`;
 const nestedXml = `<ValidationRule><metadata><description></description></metadata><errorMessage>Stop</errorMessage></ValidationRule>`;
 const malformedXml = `<ValidationRule><description></ValidationRule>`;
+const doctypeXml = `<!DOCTYPE ValidationRule [<!ENTITY xxe SYSTEM "file:///not-used">]><ValidationRule><description></description></ValidationRule>`;
+const namespacedDescriptionXml = `<md:ValidationRule xmlns:md="http://soap.sforce.com/2006/04/metadata">
+  <md:fullName>Fictional_Namespaced_Blank</md:fullName>
+  <md:description>   </md:description>
+  <md:errorMessage>Stop</md:errorMessage>
+</md:ValidationRule>`;
+const commentDescriptionXml = `<ValidationRule><description><!-- intentionally empty --></description><errorMessage>Stop</errorMessage></ValidationRule>`;
+const cdataDescriptionXml = `<ValidationRule><description><![CDATA[   ]]></description><errorMessage>Stop</errorMessage></ValidationRule>`;
 
 const positive = evaluateValidationDescription({
   path: 'objects/Account/validationRules/Fictional_Blank_Description.validationRule-meta.xml',
@@ -47,12 +59,23 @@ for (const [label, xml, status, reasonCode] of [
   ['surrogate', surrogateXml, 'Not Assessed', 'description-field-unproven'],
   ['nested', nestedXml, 'Not Assessed', 'description-field-unproven'],
   ['malformed', malformedXml, 'Malformed input', 'malformed-validation-rule-xml'],
+  ['doctype', doctypeXml, 'Malformed input', 'malformed-validation-rule-xml'],
+  ['comment-description', commentDescriptionXml, 'Not Assessed', 'description-content-unproven'],
+  ['cdata-description', cdataDescriptionXml, 'Not Assessed', 'description-content-unproven'],
 ]) {
   const result = evaluateValidationDescription({ path: `objects/Account/validationRules/${label}.validationRule-meta.xml`, source: 'selection', text: xml });
   assert.equal(result.finding, null, label);
   assert.equal(result.coverage.status, status, label);
   assert.equal(result.coverage.reasonCode, reasonCode, label);
 }
+
+const namespaced = evaluateValidationDescription({
+  path: 'objects/Account/validationRules/Fictional_Namespaced_Blank.validationRule-meta.xml',
+  source: 'selection',
+  text: namespacedDescriptionXml,
+});
+assert.equal(namespaced.coverage.status, 'Finding');
+assert.equal(namespaced.finding.source.startLine, 3);
 
 const zipEntry = evaluateValidationDescription({
   path: 'objects/Account/validationRules/Fictional.validationRule-meta.xml',
@@ -143,6 +166,13 @@ const forgedZipScanResult = await classifySelectedFiles([
 ]);
 assert.equal(forgedZipScanResult.findings.length, 0);
 assert.equal(forgedZipScanResult.coverage.some((row) => row.status === 'Malformed input' && row.reason.includes('could not be extracted locally')), true);
+
+const sampleZipScanResult = await classifySelectedFiles([
+  zipFile('fictional-validation-rule-metadata.zip', readFileSync(join(root, 'docs/samples/fictional-validation-rule-metadata.zip'))),
+]);
+assert.equal(sampleZipScanResult.findings.length, 1);
+assert.equal(sampleZipScanResult.findings[0].source.path, 'unpackaged/objects/Account/validationRules/Fictional_Blank_Description.validationRule-meta.xml');
+assert.equal(sampleZipScanResult.coverage.some((row) => row.source === 'archive:fictional-validation-rule-metadata.zip' && row.status === 'Finding'), true);
 
 const tooManyEntriesResult = await classifySelectedFiles([
   zipFile('too-many.zip', makeZip(Array.from({ length: 201 }, (_, index) => ({

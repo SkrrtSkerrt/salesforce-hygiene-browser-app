@@ -11,6 +11,7 @@
     .panel { border: 1px solid #3d464f; border-radius: 14px; padding: 1rem; background: #171b1f; }
     .boundary { border-color: #66d9a8; background: #122019; }
     button, input { font: inherit; }
+    a { color: #8fe7bd; }
     .muted { color: #b9c0c7; }
     code { background: #22282e; padding: .1rem .25rem; border-radius: 4px; }
     .inputs { display: grid; gap: .75rem; }
@@ -46,8 +47,8 @@
     <section class="panel" aria-labelledby="try-title">
       <h2 id="try-title">Try it: no Salesforce CLI needed</h2>
       <ol class="steps">
-        <li><strong>Fast test:</strong> create a local file named <code>Fictional.validationRule-meta.xml</code> with the sample below, then select it here. You should see one blank-description finding.</li>
-        <li><strong>Real metadata without CLI:</strong> use a metadata ZIP or source folder you already have from an admin, release package, backup, or Git repo. Look for files ending in <code>.validationRule-meta.xml</code>.</li>
+        <li><strong>Fast test:</strong> download the fictional <a href="./docs/samples/Fictional_Blank_Description.validationRule-meta.xml" download>sample XML</a> or <a href="./docs/samples/fictional-validation-rule-metadata.zip" download>sample ZIP</a>, then select it here. You should see one blank-description finding.</li>
+        <li><strong>Real metadata without CLI:</strong> use the <a href="./docs/NO_CLI_METADATA_GUIDE.md">no-CLI metadata guide</a> with a metadata ZIP or source folder you already have from an admin, release package, backup, or Git repo. Look for files ending in <code>.validationRule-meta.xml</code>.</li>
         <li><strong>If you do not have metadata yet:</strong> ask your Salesforce admin or dev team for a small ZIP containing ValidationRule metadata only. This app cannot inspect an org by itself.</li>
         <li><strong>Run the check:</strong> select a ZIP, folder, or individual XML files. The browser reads them locally and shows Limitations, Coverage rows, and Findings.</li>
         <li><strong>Read the result:</strong> Not Assessed means the file was recognized but no current browser rule ran on it. Rejected means the file or ZIP entry was unsafe or unsupported.</li>
@@ -55,7 +56,7 @@
       </ol>
       <details>
         <summary>Fictional sample file for a 30-second test</summary>
-        <p class="muted">Use this only as synthetic test data. Do not include credentials, org IDs, customer names, logs, screenshots, report content, filenames, or local paths in public feedback.</p>
+        <p class="muted">Use this only as synthetic test data. The same XML is also available as a static sample file and inside the sample ZIP. Do not include credentials, org IDs, customer names, logs, screenshots, report content, filenames, or local paths in public feedback.</p>
         <pre class="sample">&lt;ValidationRule xmlns="urn:metadata.tooling.soap.sforce.com"&gt;
   &lt;fullName&gt;Fictional_Blank_Description&lt;/fullName&gt;
   &lt;active&gt;true&lt;/active&gt;

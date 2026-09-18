@@ -17,8 +17,8 @@ Select Salesforce metadata files from your machine and get a point-in-time local
 ## How to try it
 
 1. Open the static GitHub Pages app.
-2. For a 30-second synthetic test, save the fictional XML sample on the page as `Fictional.validationRule-meta.xml`, then select it. One blank-description finding should appear.
-3. For real metadata without Salesforce CLI, use a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
+2. For a 30-second synthetic test, use the fictional XML file or ZIP under `docs/samples/`, or copy the inline sample on the page. One blank-description finding should appear.
+3. For real metadata without Salesforce CLI, use the no-CLI metadata guide and choose a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
 4. If the user does not have metadata yet, tell them to ask an admin or dev team for a small ZIP containing ValidationRule metadata only. The browser app cannot inspect an org by itself.
 5. Select the ZIP, folder, or XML files in the page.
 6. Read Limitations first, then Coverage rows, then Findings.

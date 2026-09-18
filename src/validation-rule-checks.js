@@ -7,7 +7,7 @@ export const VALIDATION_001_BROWSER = {
 };
 
 export function evaluateValidationDescription({ path, source = 'selection', text }) {
-  const sourceRef = buildSource(path, text, '<description');
+  const sourceRef = buildSource(path, text, 'description');
 
   const parsed = parseValidationRuleXml(text);
   if (!parsed.ok) {
@@ -21,6 +21,10 @@ export function evaluateValidationDescription({ path, source = 'selection', text
 
   if (descriptions.values.length !== 1) {
     return ruleCoverage(path, source, 'Not Assessed', descriptions.values.length === 0 ? 'description-field-unproven' : 'ambiguous-description-field', 'ValidationRule description is not represented by exactly one direct description element.', sourceRef);
+  }
+
+  if (hasUnsupportedDescriptionChildContent(descriptions.values[0])) {
+    return ruleCoverage(path, source, 'Not Assessed', 'description-content-unproven', 'ValidationRule description contains child markup or XML constructs outside the conservative browser check.', sourceRef);
   }
 
   if (descriptions.values[0].trim()) {
@@ -59,6 +63,9 @@ function ruleCoverage(path, source, status, reasonCode, reason, sourceRef) {
 
 function parseValidationRuleXml(text) {
   const trimmed = String(text || '').trim().replace(/^<\?xml[^>]*>\s*/i, '');
+  if (/<!DOCTYPE|<!ENTITY/i.test(trimmed)) {
+    return { ok: false, reason: 'XML DTD or entity declarations are outside the conservative browser ValidationRule check.' };
+  }
   const rootMatch = trimmed.match(/^<([A-Za-z_][\w:.-]*)(?:\s[^>]*)?>([\s\S]*)<\/\1>\s*$/);
   if (!rootMatch) {
     return { ok: false, reason: 'XML does not have one complete ValidationRule root element.' };
@@ -114,15 +121,20 @@ function findClose(body, openName, offset) {
   return { ok: true, start: close.index, end: closePattern.lastIndex };
 }
 
-function buildSource(path, text, needle) {
-  const line = lineFor(text, needle);
+function hasUnsupportedDescriptionChildContent(value) {
+  return /<!\[CDATA\[|<!--|<[^>]+>/.test(String(value || ''));
+}
+
+function buildSource(path, text, localElementName) {
+  const line = lineForElement(text, localElementName);
   return { path, startLine: line, endLine: line };
 }
 
-function lineFor(text, needle) {
-  const index = String(text || '').indexOf(needle);
-  if (index < 0) return 1;
-  return String(text || '').slice(0, index).split('\n').length;
+function lineForElement(text, localElementName) {
+  const pattern = new RegExp(`<(?:[A-Za-z_][\\w.-]*:)?${escapeRegExp(localElementName)}(?:\\s|>|/)`, 'i');
+  const match = pattern.exec(String(text || ''));
+  if (!match) return 1;
+  return String(text || '').slice(0, match.index).split('\n').length;
 }
 
 function metadataName(path) {

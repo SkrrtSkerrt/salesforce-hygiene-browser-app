@@ -26,8 +26,8 @@ Implemented rule:
 ## Try it on the GitHub Pages app
 
 1. Open the GitHub Pages app.
-2. For a 30-second synthetic test, save the fictional XML sample shown on the page as `Fictional.validationRule-meta.xml`, then select it. One blank-description finding should appear.
-3. For real metadata without Salesforce CLI, use a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
+2. For a 30-second synthetic test, use `docs/samples/Fictional_Blank_Description.validationRule-meta.xml` or `docs/samples/fictional-validation-rule-metadata.zip`. One blank-description finding should appear.
+3. For real metadata without Salesforce CLI, follow `docs/NO_CLI_METADATA_GUIDE.md` and use a metadata ZIP or source folder from an admin, release package, backup, or Git repo. The useful files currently end in `.validationRule-meta.xml`.
 4. If you do not have metadata yet, ask an admin or dev team for a small ZIP containing ValidationRule metadata only. The browser app cannot inspect an org by itself.
 5. Select the ZIP, folder, or XML files in the page.
 6. Read Limitations first, then Coverage rows, then Findings.
@@ -51,6 +51,9 @@ python -m http.server 8123
 - `docs/PUBLIC_COPY.md`
 - `docs/STATIC_SITE_INTEGRATION.md`
 - `docs/LOCAL_PUBLICATION_PREP.md`
+- `docs/NO_CLI_METADATA_GUIDE.md`
+- `docs/samples/Fictional_Blank_Description.validationRule-meta.xml`
+- `docs/samples/fictional-validation-rule-metadata.zip`
 - `.github/ISSUE_TEMPLATE/browser-app-feedback.yml`
 
 The app is published as a static GitHub Pages beta. Do not add hosted upload, auth, analytics, remote assets, feedback auto-prefill, Salesforce API/CLI access, or customer-data handling without a separate gate.
