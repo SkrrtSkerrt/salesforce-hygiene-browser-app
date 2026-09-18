@@ -2,7 +2,7 @@
 
 ## Status
 
-Public beta is authorized for the static GitHub Pages app. This record does not authorize analytics, hosted upload, OAuth, Salesforce access, customer-data handling, feedback auto-prefill, package-registry publication, or stronger assurance/compliance claims.
+Public beta is authorized for the static GitHub Pages app. This record authorizes a plain GitHub issue-template feedback link and a plain optional PayPal donation link. It does not authorize analytics, hosted upload, OAuth, Salesforce access, customer-data handling, feedback auto-prefill, PayPal scripts/forms/iframes, package-registry publication, or stronger assurance/compliance claims.
 
 ## Purpose
 

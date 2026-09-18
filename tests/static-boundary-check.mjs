@@ -1,6 +1,11 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+const allowedExternalHrefs = new Set([
+  'https://github.com/SkrrtSkerrt/salesforce-hygiene-browser-app/issues/new?template=browser-app-feedback.yml',
+  'https://www.paypal.com/donate/?hosted_button_id=J9SKEQNJFEV4W',
+]);
+
 const root = new URL('..', import.meta.url).pathname;
 const runtimeRoots = new Set(['index.html', 'src']);
 const scannedExtensions = new Set(['.html', '.js', '.mjs', '.css', '.json']);
@@ -14,7 +19,6 @@ const deniedPatterns = [
   /localStorage/,
   /sessionStorage/,
   /indexedDB/,
-  /https?:\/\//,
   /<form[^>]+action=/i,
   /<script[^>]+src=["']https?:/i,
   /<link[^>]+href=["']https?:/i,
@@ -43,6 +47,12 @@ for (const file of walk(root)) {
   for (const pattern of deniedPatterns) {
     if (pattern.test(text)) failures.push(`${rel} matches ${pattern}`);
   }
+  const externalHrefMatches = text.matchAll(/href=["'](https?:\/\/[^"']+)["']/gi);
+  for (const match of externalHrefMatches) {
+    if (!allowedExternalHrefs.has(match[1])) failures.push(`${rel} contains unapproved external href: ${match[1]}`);
+  }
+  const externalSrcMatches = text.matchAll(/src=["']https?:\/\/[^"']+["']/gi);
+  for (const match of externalSrcMatches) failures.push(`${rel} contains remote src: ${match[0]}`);
 }
 
 if (failures.length) {

@@ -47,6 +47,8 @@ This is not a complete Salesforce security audit. It is not a compliance certifi
 
 Feedback is manual through the public issue template only. Do not paste metadata, source code, org IDs, emails, customer names, screenshots, logs, credentials, tokens, URLs, reports, findings, filenames, or local paths.
 
+Optional tips use a plain PayPal donation link. Tips are handled on PayPal's site and do not change the local-only browser scan boundary.
+
 ## Footer copy
 
 Salesforce is a trademark of Salesforce, Inc. This project is independent and not affiliated with, endorsed by, or sponsored by Salesforce.

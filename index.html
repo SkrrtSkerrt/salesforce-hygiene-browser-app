@@ -23,6 +23,9 @@
     .steps { margin: 0; padding-left: 1.25rem; display: grid; gap: .7rem; }
     .sample { overflow-x: auto; white-space: pre; background: #0e1114; border: 1px solid #303941; border-radius: 10px; padding: .75rem; }
     .callout { border-left: 4px solid #66d9a8; padding-left: .75rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+    .button-link { display: inline-block; border: 1px solid #66d9a8; border-radius: 999px; padding: .55rem .8rem; color: #101214; background: #8fe7bd; font-weight: 700; text-decoration: none; }
+    .button-link.secondary { color: #8fe7bd; background: transparent; }
   </style>
 </head>
 <body>
@@ -42,6 +45,17 @@
         <li>No server upload.</li>
         <li>No scan-data persistence.</li>
       </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="feedback-title">
+      <h2 id="feedback-title">Feedback and support</h2>
+      <p class="muted">Feedback uses a manually filled GitHub issue template. The app does not prefill feedback with scan data, filenames, findings, report content, local paths, org names, telemetry, or local labels.</p>
+      <p class="muted">Do not include Salesforce metadata, source code, org IDs, emails, customer names, screenshots, logs, credentials, tokens, URLs, report content, finding details, filenames, or local paths.</p>
+      <div class="actions">
+        <a class="button-link" href="https://github.com/SkrrtSkerrt/salesforce-hygiene-browser-app/issues/new?template=browser-app-feedback.yml" rel="noopener noreferrer" target="_blank">Open safe feedback issue</a>
+        <a class="button-link secondary" href="https://www.paypal.com/donate/?hosted_button_id=J9SKEQNJFEV4W" rel="noopener noreferrer" target="_blank">Leave an optional tip</a>
+      </div>
+      <p class="muted">Tips are optional and handled by PayPal on PayPal's site. They do not change the browser-only scan boundary.</p>
     </section>
 
     <section class="panel" aria-labelledby="try-title">

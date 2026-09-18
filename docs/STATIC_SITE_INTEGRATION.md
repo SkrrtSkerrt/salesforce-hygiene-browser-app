@@ -38,6 +38,10 @@ Use GitHub issues only. The app must not auto-open or auto-prefill an issue URL 
 
 Any feedback link must be a plain link to the repository issue page or a manually filled issue template. No query-string prefill from runtime state.
 
+## Optional tip route
+
+A plain PayPal donation link is allowed as static navigation only. It must not collect scan data, metadata, filenames, report content, local paths, org identifiers, telemetry, or local labels from the app. Do not add PayPal scripts, buttons with hosted JavaScript, iframes, form actions, tracking pixels, or runtime payment logic.
+
 ## Release checklist
 
 Run these checks before public beta updates:

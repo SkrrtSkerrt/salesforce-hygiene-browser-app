@@ -13,6 +13,7 @@ Static browser-only public beta for the free Salesforce Hygiene app.
 - One browser rule only.
 - Local report downloads use browser blobs only.
 - Public feedback uses the GitHub issue template only; do not include metadata, source, org IDs, screenshots, logs, credentials, tokens, URLs, report content, filenames, or local paths.
+- Optional tips use a plain PayPal donation link and do not change the browser-only scan boundary.
 - The npm package remains marked private to block package-registry publication.
 
 ## Current state
@@ -32,6 +33,13 @@ Implemented rule:
 5. Select the ZIP, folder, or XML files in the page.
 6. Read Limitations first, then Coverage rows, then Findings.
 7. Download the JSON or HTML report if you need local evidence.
+
+## Feedback and optional tips
+
+- Safe feedback issue template: https://github.com/SkrrtSkerrt/salesforce-hygiene-browser-app/issues/new?template=browser-app-feedback.yml
+- Optional tip link: https://www.paypal.com/donate/?hosted_button_id=J9SKEQNJFEV4W
+
+Do not include Salesforce metadata, source code, org IDs, emails, customer names, screenshots, logs, credentials, tokens, URLs, report content, finding details, filenames, or local paths in public feedback. Tips are handled by PayPal on PayPal's site; the browser app still does not upload metadata, reports, scan results, or local labels.
 
 ## Verify boundary and classifier
 

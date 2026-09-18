@@ -47,6 +47,7 @@ for (const required of [
   'No scan-data storage',
   'not upload metadata, reports, filenames, scan results, telemetry, or local labels',
   'Unsupported metadata is reported as Not Assessed',
+  'Optional tips use a plain PayPal donation link',
 ]) {
   if (!publicCopy.includes(required)) failures.push(`PUBLIC_COPY missing required phrase: ${required}`);
 }
@@ -56,6 +57,7 @@ for (const required of [
   'No hosted upload endpoint',
   'No analytics script',
   'No query-string prefill from runtime state',
+  'plain PayPal donation link is allowed as static navigation only',
   'Secret/private-data scan before public commits',
 ]) {
   if (!staticPlan.includes(required)) failures.push(`STATIC_SITE_INTEGRATION missing required phrase: ${required}`);
@@ -85,6 +87,11 @@ for (const required of [
   'no-CLI metadata guide',
   'ask your Salesforce admin or dev team for a small ZIP containing ValidationRule metadata only',
   'Not Assessed means the file was recognized but no current browser rule ran on it',
+  'Open safe feedback issue',
+  'Leave an optional tip',
+  'The app does not prefill feedback with scan data',
+  'https://github.com/SkrrtSkerrt/salesforce-hygiene-browser-app/issues/new?template=browser-app-feedback.yml',
+  'https://www.paypal.com/donate/?hosted_button_id=J9SKEQNJFEV4W',
 ]) {
   if (!index.includes(required)) failures.push(`index missing user walkthrough phrase: ${required}`);
 }
