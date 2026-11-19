@@ -50,12 +50,17 @@ export function createEmptyScanResult({ fileCount = 0 } = {}) {
 }
 
 async function runBrowserRules(files, coverageRows, archiveTextEntries) {
-  const byPath = new Map(files.map((file) => [file.webkitRelativePath || file.name, file]));
+  // Selection coverage preserves FileList order. Pair before filtering so a
+  // rejected raw alias cannot overwrite an accepted normalized path's File.
+  const selectedRows = coverageRows.filter((row) => row.source === 'selection');
+  const byPath = new Map(selectedRows.flatMap((row, index) => (
+    row.status === 'Accepted' ? [[row.path, files[index]]] : []
+  )));
   const archiveTextBySourcePath = new Map(archiveTextEntries.map((entry) => [`${entry.source}\u0000${entry.path}`, entry.text]));
   const results = [];
 
   for (const row of coverageRows) {
-    if (row.metadataType !== 'ValidationRule') continue;
+    if (row.status !== 'Accepted' || row.metadataType !== 'ValidationRule') continue;
     if (row.source !== 'selection') {
       const text = archiveTextBySourcePath.get(`${row.source}\u0000${row.path}`);
       if (typeof text !== 'string') continue;

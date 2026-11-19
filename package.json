@@ -21,6 +21,8 @@
     "test:public-copy": "node tests/test-public-copy.mjs",
     "test:redaction": "node tests/test-redaction-sweep.mjs",
     "test:publication-prep": "node tests/test-publication-prep.mjs",
-    "test": "npm run test:classifier && npm run test:validation && npm run test:export && npm run test:public-copy && npm run test:redaction && npm run test:publication-prep && npm run test:boundary"
+    "test:scanner": "node --test tests/test-scanner-contract.mjs",
+    "test:ui": "node --experimental-vm-modules --test tests/test-main.mjs",
+    "test": "npm run test:classifier && npm run test:validation && npm run test:scanner && npm run test:ui && npm run test:export && npm run test:public-copy && npm run test:redaction && npm run test:publication-prep && npm run test:boundary"
   }
 }

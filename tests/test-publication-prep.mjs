@@ -28,6 +28,11 @@ for (const rel of requiredFiles) {
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 if (pkg.private !== true) failures.push('package.json must remain private to block package-registry publication');
 if (!String(pkg.version || '').includes('public-beta')) failures.push('package version must mark public beta');
+for (const name of ['scanner', 'ui']) {
+  if (!pkg.scripts?.[`test:${name}`] || !pkg.scripts?.test?.includes(`npm run test:${name}`)) {
+    failures.push(`npm test must include the ${name} regression suite`);
+  }
+}
 
 const expectedFiles = ['.github/ISSUE_TEMPLATE/browser-app-feedback.yml', 'docs/', 'src/', 'tests/', 'index.html', 'README.md', 'package.json'];
 for (const rel of expectedFiles) {

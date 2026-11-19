@@ -47,6 +47,43 @@ Do not include Salesforce metadata, source code, org IDs, emails, customer names
 npm test
 ```
 
+This gate includes classifier/ZIP, XML, scanner-contract, UI race/export, report,
+publication, redaction, and static network/persistence checks. The UI VM harness
+uses Node's `--experimental-vm-modules` flag; its experimental warning is expected.
+
+Optional real-Chromium acceptance, using an already installed Python Playwright
+and Chromium (no dependency installation is performed):
+
+```bash
+python tests/browser-acceptance.py --output /tmp/salesforce-browser-acceptance
+```
+
+The browser harness starts an ephemeral loopback-only static server, uses fictional
+inputs, saves actual JSON/HTML Blob downloads plus a screenshot and acceptance
+report under the output directory, and stops the server on exit. It covers native
+file/folder inputs, stored/deflated ZIPs, unsafe paths, malformed inputs, stale
+completions, export eligibility, safe error recovery, and observed network/storage
+behavior. Deterministic File API gates/errors supplement native browser scenarios.
+It does not deploy or contact Salesforce. Firefox/WebKit and real customer data are
+not covered.
+
+## Known limitations retained in this repair slice
+
+- This is a conservative XML 1.0 subset reader, not Salesforce schema validation.
+  ASCII QNames only, bounded nesting, no DTD or XML 1.1; unsupported syntax becomes
+  explicit coverage rather than a finding.
+- Rule field matching uses local element names, not Salesforce namespace identity.
+  Foreign-namespace lookalikes can still affect results.
+- File/ZIP text decoding can replace invalid UTF-8 bytes before XML parsing. The
+  app does not prove original byte-level XML encoding validity.
+- `Accepted` is file classification, not proof that a rule assessed that file.
+  Recognized non-ValidationRule types have no implemented content rule; the
+  `rules_evaluated` summary currently lists the enabled rule even when it did not
+  execute. Inspect per-rule coverage, not that summary alone.
+- ZIP limits are per archive, not an aggregate budget across all selected archives.
+- Reports omit raw XML but retain relative metadata names/paths. They are not
+  anonymized and must not be posted as public feedback.
+
 ## Run locally
 
 ```bash
