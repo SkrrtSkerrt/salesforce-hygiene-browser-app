@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { classifySelectedFiles } from '../src/scanner-adapter.js';
 import { renderLimitations } from '../src/report-renderer.js';
 import { evaluateValidationDescription } from '../src/validation-rule-checks.js';
+import { readXml } from '../src/xml-reader.js';
 import { makeZip } from './zip-fixtures.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -48,7 +49,7 @@ for (const [label, text, status, reasonCode] of [
   ['BOM and CRLF', '\uFEFF<?xml version="1.0"?>\r\n<ValidationRule>\r\n<description/>\r\n</ValidationRule>', 'Finding', 'blank-description'],
   ['declaration lookalike in comment', wrap('<!-- <!DOCTYPE fake> --><description/>'), 'Finding', 'blank-description'],
   ['declaration lookalike in CDATA sibling', wrap('<other><![CDATA[<!ENTITY fake>]]></other><description/>'), 'Finding', 'blank-description'],
-  ['namespace alias direct field', '<m:ValidationRule xmlns:m="urn:synthetic" xmlns:n="urn:synthetic"><n:description/></m:ValidationRule>', 'Finding', 'blank-description'],
+  ['namespace alias direct field', '<m:ValidationRule xmlns:m="http://soap.sforce.com/2006/04/metadata" xmlns:n="http://soap.sforce.com/2006/04/metadata"><n:description/></m:ValidationRule>', 'Finding', 'blank-description'],
   ['standalone declaration', '<?xml version=\'1.0\' standalone=\'yes\'?>' + wrap('<description/>'), 'Finding', 'blank-description'],
   ['complete declaration', '<?xml version="1.0" encoding="UTF-8" standalone="no"?>' + wrap('<description/>'), 'Finding', 'blank-description'],
   ['scoped namespace binding', '<ValidationRule><other xmlns:m="urn:synthetic"><m:child/></other><description xml:space="preserve"/></ValidationRule>', 'Finding', 'blank-description'],
@@ -57,7 +58,7 @@ for (const [label, text, status, reasonCode] of [
   ['close-tag lookalike in comment', wrap('<other><!-- </other> --></other><description/>'), 'Finding', 'blank-description'],
   ['empty input', '', 'Malformed input', 'malformed-validation-rule-xml'],
   ['wrong root', '<Other><description/></Other>', 'Malformed input', 'malformed-validation-rule-xml'],
-  ['same expanded name duplicates', '<m:ValidationRule xmlns:m="urn:synthetic" xmlns:n="urn:synthetic"><m:description/><n:description/></m:ValidationRule>', 'Not Assessed', 'ambiguous-description-field'],
+  ['same expanded name duplicates', '<m:ValidationRule xmlns:m="http://soap.sforce.com/2006/04/metadata" xmlns:n="http://soap.sforce.com/2006/04/metadata"><m:description/><n:description/></m:ValidationRule>', 'Not Assessed', 'ambiguous-description-field'],
 ]) {
   xmlRegression(label, () => {
     const result = evaluateSynthetic(text);
@@ -164,6 +165,59 @@ xmlRegression('selection and archives retain distinct stable origins', () => {
 xmlRegression('nonfinding provenance', () => {
   const result = evaluateSynthetic(wrap(''), 'archive:synthetic-a.zip');
   assert.equal(result.coverage.sourceRef.origin, 'archive:synthetic-a.zip');
+});
+// Namespace identity is the expanded name, never the spelling of a prefix.
+// Empty namespaces remain supported only as a consistent legacy root/field pair.
+const metadataNamespace = 'http://soap.sforce.com/2006/04/metadata';
+const canonicalWrap = (body) => `<ValidationRule xmlns="${metadataNamespace}" xmlns:m="${metadataNamespace}" xmlns:f="urn:foreign">${body}</ValidationRule>`;
+for (const [label, text, status, reasonCode] of [
+  ['legacy blank field', wrap('<description/>'), 'Finding', 'blank-description'],
+  ['legacy present field', wrap('<description>Context</description>'), 'Assessed', 'description-present'],
+  ['canonical inherited default', canonicalWrap('<description/>'), 'Finding', 'blank-description'],
+  ['canonical present field', canonicalWrap('<description>Context</description>'), 'Assessed', 'description-present'],
+  ['canonical explicit field default', canonicalWrap(`<description xmlns="${metadataNamespace}"/>`), 'Finding', 'blank-description'],
+  ['canonical prefixed field default root', canonicalWrap('<m:description/>'), 'Finding', 'blank-description'],
+  ['canonical prefixed root default field', `<m:ValidationRule xmlns:m="${metadataNamespace}" xmlns="${metadataNamespace}"><description/></m:ValidationRule>`, 'Finding', 'blank-description'],
+  ['canonical field local prefix declaration', `<m:ValidationRule xmlns:m="${metadataNamespace}"><n:description xmlns:n="${metadataNamespace}"/></m:ValidationRule>`, 'Finding', 'blank-description'],
+  ['canonical prefix independent of foreign default', `<m:ValidationRule xmlns:m="${metadataNamespace}" xmlns="urn:foreign"><m:description/></m:ValidationRule>`, 'Finding', 'blank-description'],
+  ['foreign sibling does not leak default', canonicalWrap('<other xmlns="urn:foreign"><description/></other><description/>'), 'Finding', 'blank-description'],
+  ['foreign sibling does not leak prefix', canonicalWrap('<other xmlns:m="urn:foreign"><m:description/></other><m:description/>'), 'Finding', 'blank-description'],
+  ['foreign default root', '<ValidationRule xmlns="urn:foreign"><description/></ValidationRule>', 'Not Assessed', 'validation-rule-namespace-unproven'],
+  ['foreign prefixed root', '<f:ValidationRule xmlns:f="urn:foreign"><f:description>Context</f:description></f:ValidationRule>', 'Not Assessed', 'validation-rule-namespace-unproven'],
+  ['foreign root canonical field', `<ValidationRule xmlns="urn:foreign"><description xmlns="${metadataNamespace}"/></ValidationRule>`, 'Not Assessed', 'validation-rule-namespace-unproven'],
+  ['namespace URI is case sensitive', '<ValidationRule xmlns="http://soap.sforce.com/2006/04/Metadata"><description/></ValidationRule>', 'Not Assessed', 'validation-rule-namespace-unproven'],
+  ['namespace URI trailing slash differs', `<ValidationRule xmlns="${metadataNamespace}/"><description/></ValidationRule>`, 'Not Assessed', 'validation-rule-namespace-unproven'],
+  ['foreign direct blank field', canonicalWrap('<f:description/>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['foreign direct present field', canonicalWrap('<f:description>Context</f:description>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['default namespace shadowed on field', canonicalWrap('<description xmlns="urn:foreign"/>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['prefix namespace shadowed on field', canonicalWrap('<m:description xmlns:m="urn:foreign"/>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['default namespace removed on field', canonicalWrap('<description xmlns=""/>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['prefixed root does not default unprefixed field', `<m:ValidationRule xmlns:m="${metadataNamespace}"><description/></m:ValidationRule>`, 'Not Assessed', 'description-namespace-unproven'],
+  ['legacy root foreign field', wrap('<f:description xmlns:f="urn:foreign"/>'), 'Not Assessed', 'description-namespace-unproven'],
+  ['legacy root canonical field is mixed dialect', wrap(`<description xmlns="${metadataNamespace}"/>`), 'Not Assessed', 'description-namespace-unproven'],
+  ['canonical plus foreign blank duplicate', canonicalWrap('<description/><f:description/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['foreign present plus canonical blank duplicate', canonicalWrap('<f:description>Context</f:description><description/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['canonical present plus foreign blank duplicate', canonicalWrap('<description>Context</description><f:description/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['canonical plus removed namespace duplicate', canonicalWrap('<description/><description xmlns=""/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['legacy plus foreign duplicate', wrap('<description/><f:description xmlns:f="urn:foreign"/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['canonical plus shadowed prefix duplicate', canonicalWrap('<m:description/><m:description xmlns:m="urn:foreign"/>'), 'Not Assessed', 'ambiguous-description-field'],
+  ['unbound root prefix', '<m:ValidationRule><description/></m:ValidationRule>', 'Malformed input', 'malformed-validation-rule-xml'],
+  ['canonical root unbound field prefix', canonicalWrap('<missing:description/>'), 'Malformed input', 'malformed-validation-rule-xml'],
+]) {
+  xmlRegression(`namespace: ${label}`, () => {
+    const result = evaluateSynthetic(text);
+    assert.equal(result.coverage.status, status);
+    assert.equal(result.coverage.reasonCode, reasonCode);
+    assert.equal(Boolean(result.finding), status === 'Finding');
+  });
+}
+xmlRegression('reader resolves inherited, overridden and restored namespaces', () => {
+  const result = readXml(canonicalWrap('<m:description/><other xmlns="urn:foreign"><child/></other><description/><description xmlns=""/>'));
+  assert.equal(result.ok, true);
+  assert.equal(result.root.namespaceURI, metadataNamespace);
+  assert.deepEqual(result.root.children.map((node) => node.namespaceURI), [metadataNamespace, 'urn:foreign', metadataNamespace, '']);
+  assert.equal(result.root.children[1].children[0].namespaceURI, 'urn:foreign');
+  assert.equal(readXml(wrap('<description/>')).root.namespaceURI, '');
 });
 assert.deepEqual(xmlRegressionFailures, [], 'synthetic XML regressions');
 console.log(`${xmlRegressionCount} synthetic XML/provenance regressions passed`);
@@ -327,7 +381,7 @@ const forgedZipScanResult = await classifySelectedFiles([
   ])),
 ]);
 assert.equal(forgedZipScanResult.findings.length, 0);
-assert.equal(forgedZipScanResult.coverage.some((row) => row.status === 'Malformed input' && row.reason.includes('could not be extracted locally')), true);
+assert.equal(forgedZipScanResult.coverage.some((row) => row.status === 'Malformed input' && row.reason.includes('could not be extracted or decoded locally')), true);
 
 const sampleZipScanResult = await classifySelectedFiles([
   zipFile('fictional-validation-rule-metadata.zip', readFileSync(join(root, 'docs/samples/fictional-validation-rule-metadata.zip'))),
@@ -351,15 +405,16 @@ console.log('validation rule checks passed');
 function file(name, text) {
   return {
     name,
-    size: text.length,
-    async text() { return text; },
+    size: new TextEncoder().encode(text).byteLength,
+    async arrayBuffer() { return new TextEncoder().encode(text).buffer; },
   };
 }
 
 function zipFile(name, buffer) {
+  const bytes = buffer instanceof ArrayBuffer ? buffer : buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
   return {
     name,
-    size: buffer.byteLength,
-    async arrayBuffer() { return buffer; },
+    size: bytes.byteLength,
+    async arrayBuffer() { return bytes; },
   };
 }

@@ -26,6 +26,17 @@
     .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
     .button-link { display: inline-block; border: 1px solid #66d9a8; border-radius: 999px; padding: .55rem .8rem; color: #101214; background: #8fe7bd; font-weight: 700; text-decoration: none; }
     .button-link.secondary { color: #8fe7bd; background: transparent; }
+    /* Keep long metadata paths inside panels; retain every coverage column. */
+    main > *, .inputs, label { min-width: 0; }
+    .panel { overflow-wrap: anywhere; }
+    input[type="file"] { width: 100%; min-width: 0; }
+    #coverageRows { max-width: 100%; overflow-x: auto; }
+    #coverageRows table { min-width: 38rem; }
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      button { min-height: 44px; margin-block: .25rem; max-width: 100%; }
+      input[type="file"] { min-height: 44px; }
+    }
   </style>
 </head>
 <body>
@@ -65,7 +76,7 @@
         <li><strong>Real metadata without CLI:</strong> use the <a href="./docs/NO_CLI_METADATA_GUIDE.md">no-CLI metadata guide</a> with a metadata ZIP or source folder you already have from an admin, release package, backup, or Git repo. Look for files ending in <code>.validationRule-meta.xml</code>.</li>
         <li><strong>If you do not have metadata yet:</strong> ask your Salesforce admin or dev team for a small ZIP containing ValidationRule metadata only. This app cannot inspect an org by itself.</li>
         <li><strong>Run the check:</strong> select a ZIP, folder, or individual XML files. The browser reads them locally and shows Limitations, Coverage rows, and Findings.</li>
-        <li><strong>Read the result:</strong> Not Assessed means the file was recognized but no current browser rule ran on it. Rejected means the file or ZIP entry was unsafe or unsupported.</li>
+        <li><strong>Read the result:</strong> Accepted means the input was recognized and eligible, not that a rule completed. Not Assessed means the browser check could not assess that content; read the coverage reason. Rejected means the input was unsafe, unsupported, ambiguous, or over a processing limit.</li>
         <li><strong>Save evidence:</strong> use Download JSON report or Download HTML report. The download is generated in this tab.</li>
       </ol>
       <details>

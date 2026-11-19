@@ -1,6 +1,6 @@
-"""Optional real-Chromium acceptance; uses an existing Playwright installation only.
-Run: python tests/browser-acceptance.py --output /tmp/browser-acceptance
-No dependency installation, external requests, customer inputs or deployment.
+"""Real-browser acceptance against local files or an unchanged public static deployment.
+Run: python tests/browser-acceptance.py --browser firefox --mobile
+Synthetic inputs only; no uploads, application substitution, or deployment.
 """
 import argparse
 import functools
@@ -11,7 +11,7 @@ from pathlib import Path
 import tempfile
 import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode, unquote
 import zipfile
 
 from playwright.sync_api import sync_playwright, expect
@@ -44,20 +44,38 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=None)
+    parser.add_argument('--browser', choices=['chromium', 'firefox', 'webkit'], default='chromium')
+    parser.add_argument('--mobile', action='store_true', help='390x844 touch viewport (not device emulation)')
+    parser.add_argument('--base-url', help='Static deployment root, with or without trailing slash')
+    parser.add_argument('--cache-key', default=None, help='Cache-bust every allowed static GET')
     args = parser.parse_args()
-    out = (args.output or Path(tempfile.mkdtemp(prefix='browser-acceptance-'))).resolve()
+    out = (args.output or Path('/tmp/browser-hardening-matrix') / f'{args.browser}-{"mobile" if args.mobile else "desktop"}').resolve()
     out.mkdir(parents=True, exist_ok=True)
-    report = {'status': 'running', 'checks': [], 'requests': [], 'console_errors': [], 'page_errors': []}
-    server = ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Handler, directory=str(ROOT)))
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    origin = f'http://127.0.0.1:{server.server_port}'
+    viewport = {'width': 390, 'height': 844} if args.mobile else {'width': 1280, 'height': 900}
+    report = {'status': 'running', 'engine': args.browser, 'viewport': viewport, 'mobile_size': args.mobile,
+              'checks': [], 'requests': [], 'console_errors': [], 'page_errors': [], 'unsupported': [], 'downloads': []}
+    server = None
+    if args.base_url:
+        parsed = urlsplit(args.base_url)
+        if parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.username or parsed.password:
+            parser.error('--base-url must be an HTTP(S) static deployment root without credentials')
+        base = urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip('/') + '/', '', ''))
+    else:
+        server = ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Handler, directory=str(ROOT)))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        base = f'http://127.0.0.1:{server.server_port}/'
+    origin = urlsplit(base)
+    report['base_url'] = base
+    report['cache_key'] = args.cache_key
     unexpected = []
+    page = None
     try:
         with sync_playwright() as engine, tempfile.TemporaryDirectory(prefix='fictional-browser-inputs-') as temp:
-            browser = engine.chromium.launch()
+            browser = getattr(engine, args.browser).launch()
             report['browser'] = browser.version
-            context = browser.new_context(accept_downloads=True, service_workers='block')
+            report['executable'] = getattr(engine, args.browser).executable_path
+            context = browser.new_context(accept_downloads=True, service_workers='block', viewport=viewport, has_touch=args.mobile)
+            context.set_default_timeout(10000)
             page = context.new_page()
             page.on('pageerror', lambda error: report['page_errors'].append(str(error)))
             page.on('console', lambda message: report['console_errors'].append(message.text) if message.type == 'error' else None)
@@ -66,13 +84,26 @@ def main():
                 request = route.request
                 entry = {'method': request.method, 'url': request.url, 'type': request.resource_type}
                 report['requests'].append(entry)
-                path = urlsplit(request.url).path
-                allowed = request.url.startswith(origin + '/') and request.method == 'GET' and (path in ('/', '/index.html') or path.startswith('/src/'))
+                parsed = urlsplit(request.url)
+                relative = unquote(parsed.path[len(origin.path):]) if parsed.path.startswith(origin.path) else None
+                allowed = (parsed.scheme == origin.scheme and parsed.netloc == origin.netloc
+                           and request.method == 'GET' and relative is not None
+                           and '..' not in relative.split('/') and '\\' not in relative
+                           and (relative in ('', 'index.html') or (relative.startswith('src/') and relative.endswith('.js'))
+                                or relative.startswith('docs/samples/')))
+                entry['allowed'] = allowed
                 if not allowed:
                     unexpected.append(entry)
                     route.abort()
                 else:
-                    route.continue_()
+                    if args.cache_key:
+                        query = [(key, value) for key, value in parse_qsl(parsed.query) if key != 'acceptance_cache']
+                        query.append(('acceptance_cache', args.cache_key))
+                        transport = urlunsplit(parsed._replace(query=urlencode(query)))
+                        entry['transport_url'] = transport
+                        route.continue_(url=transport)
+                    else:
+                        route.continue_()
 
             context.route('**/*', route_request)
             page.add_init_script('''
@@ -85,7 +116,7 @@ def main():
                 if (navigator.serviceWorker) navigator.serviceWorker.register = deny('serviceWorker.register');
                 if (window.caches) caches.open = deny('caches.open');
             ''')
-            page.goto(origin + '/', wait_until='networkidle')
+            page.goto(base, wait_until='networkidle')
             files = page.locator('#metadataFiles')
             folder = page.locator('#metadataFolder')
             json_button = page.locator('#downloadJson')
@@ -94,6 +125,8 @@ def main():
 
             def checked(name):
                 report['checks'].append(name)
+                report['privacy_last_completed_group'] = page.evaluate('''() => ({boundaryCalls: window.__boundaryCalls,
+                    localStorageKeys: Object.keys(localStorage), sessionStorageKeys: Object.keys(sessionStorage), cookies: document.cookie})''')
 
             def select(name, content, expected_text=None):
                 files.set_input_files({'name': name, 'mimeType': 'application/zip' if name.endswith('.zip') else 'application/xml', 'buffer': content.encode() if isinstance(content, str) else content})
@@ -107,8 +140,10 @@ def main():
                 item = event.value
                 assert item.suggested_filename.endswith(suffix)
                 assert item.failure() is None
-                target = out / ('report' + suffix)
+                target = out / (f'report-{len(report["downloads"]) + 1}' + suffix)
                 item.save_as(target)
+                report['downloads'].append({'path': str(target), 'suggested_filename': item.suggested_filename,
+                                            'bytes': target.stat().st_size, 'sha256': hashlib.sha256(target.read_bytes()).hexdigest()})
                 return target.read_text()
 
             expect(json_button).to_be_disabled()
@@ -121,6 +156,7 @@ def main():
             expect(page.locator('#findingsRows .finding')).to_have_count(1)
             result = json.loads(download(json_button, '.json'))
             assert len(result['findings']) == 1
+            assert result['rules_evaluated'] == [result['findings'][0]['rule_id']]
             assert result['manifest']['upload_model'] == 'no-server-upload'
             assert all(key in result for key in ['schema_version', 'tool_version', 'generated_at_local', 'processing_model', 'input_summary', 'rules_evaluated', 'limitations', 'coverage'])
             assert BLANK not in json.dumps(result)
@@ -128,6 +164,31 @@ def main():
             assert html.index('<h2>Scope and limitations</h2>') < html.index('<h2>Findings</h2>')
             assert '<ValidationRule>' not in html
             checked('native File selection, one finding, real JSON/HTML Blob downloads and report contract')
+
+            def check_layout(label):
+                geometry = page.evaluate('''() => ({width: innerWidth, documentWidth: document.documentElement.scrollWidth,
+                    coverageWidth: document.querySelector('#coverageRows').clientWidth,
+                    coverageScrollWidth: document.querySelector('#coverageRows').scrollWidth})''')
+                report.setdefault('layout', {})[label] = geometry
+                page.screenshot(path=str(out / (label + '.png')), full_page=True)
+                assert geometry['documentWidth'] <= geometry['width'] + 1, geometry
+                for selector in ['#metadataFiles', '#metadataFolder', '#downloadJson', '#downloadHtml',
+                                 '#limitations-title', '#findings-title', '#coverage-title']:
+                    control = page.locator(selector)
+                    control.scroll_into_view_if_needed()
+                    expect(control).to_be_visible()
+                    box = control.bounding_box()
+                    assert box and box['width'] > 0 and box['height'] > 0 and box['x'] >= 0 and box['x'] + box['width'] <= viewport['width'] + 1, (selector, box)
+                    if args.mobile and selector in ['#metadataFiles', '#metadataFolder', '#downloadJson', '#downloadHtml']:
+                        assert box['height'] >= 43.5, (selector, box)  # Fractional layout rounding differs by engine.
+                if geometry['coverageScrollWidth'] > geometry['coverageWidth']:
+                    scrolled = page.locator('#coverageRows').evaluate('node => { node.scrollLeft = node.scrollWidth; const moved = node.scrollLeft; node.scrollLeft = 0; return moved; }')
+                    assert scrolled > 0, 'Coverage columns must remain horizontally reachable'
+                for control in [json_button, html_button]:
+                    expect(control).to_be_enabled()
+
+            check_layout('finding-layout')
+            checked('document fits viewport; native inputs, export controls, findings/limitations/coverage usable')
 
             for name, text, expected_status in [
                 ('Documented.validationRule-meta.xml', PRESENT, 'nonblank direct description'),
@@ -138,10 +199,28 @@ def main():
                 expect(page.locator('#findingsRows .finding')).to_have_count(0)
             checked('documented/malformed XML and comment-lookalike false-positive prevention')
 
+            for name, content in [
+                ('InvalidUtf8.validationRule-meta.xml', b'<ValidationRule><description>\xff</description></ValidationRule>'),
+                ('Foreign.validationRule-meta.xml', '<ValidationRule xmlns="urn:fictional:foreign"><description/></ValidationRule>'),
+                ('ForeignChild.validationRule-meta.xml', '<ValidationRule><description xmlns="urn:fictional:foreign"/></ValidationRule>'),
+            ]:
+                select(name, content)
+                expect(page.locator('#findingsRows .finding')).to_have_count(0)
+                invalid_result = json.loads(download(json_button, '.json'))
+                assert invalid_result['rules_evaluated'] == sorted({row['rule_id'] for row in invalid_result['coverage'] if row['rule_id']})
+                if name.startswith('InvalidUtf8'):
+                    assert invalid_result['rules_evaluated'] == []
+                else:
+                    assert invalid_result['rules_evaluated'] == result['rules_evaluated']
+                assert any(row['status'] in ('Malformed input', 'Not Assessed', 'Rejected') for row in invalid_result['coverage'])
+            select('Unsupported.txt', 'Fictional non-metadata text')
+            assert json.loads(download(json_button, '.json'))['rules_evaluated'] == []
+            checked('invalid UTF-8 and foreign namespaces have no findings; rules_evaluated reflects actual rule attempts')
+
             for compression, label in [(zipfile.ZIP_STORED, 'Stored'), (zipfile.ZIP_DEFLATED, 'Deflated')]:
                 select(label + '.zip', zip_bytes([('objects/Account/validationRules/Fictional.validationRule-meta.xml', BLANK)], compression))
                 expect(page.locator('#findingsRows .finding')).to_have_count(1)
-            checked('real Chromium stored and deflate ZIP extraction')
+            checked('native stored and deflate ZIP extraction')
 
             unsafe = zip_bytes([(name, BLANK) for name in ['../Fictional.validationRule-meta.xml', '/Fictional.validationRule-meta.xml', 'C:Folder/Fictional.validationRule-meta.xml', '\\Fictional.validationRule-meta.xml']])
             select('Unsafe.zip', unsafe, 'Rejected')
@@ -153,17 +232,20 @@ def main():
             folder_path = Path(temp) / 'FictionalFolder'
             folder_path.mkdir()
             (folder_path / 'FolderRule.validationRule-meta.xml').write_text(BLANK)
-            folder.set_input_files(str(folder_path))
-            expect(status).to_contain_text('Scan complete.')
-            expect(page.locator('#findingsRows .finding')).to_have_count(1)
-            expect(page.locator('#coverageRows')).to_contain_text('FictionalFolder/FolderRule.validationRule-meta.xml')
-            checked('native directory selection and relative-path provenance')
+            if folder.evaluate("node => 'webkitdirectory' in node"):
+                folder.set_input_files(str(folder_path))
+                expect(status).to_contain_text('Scan complete.')
+                expect(page.locator('#findingsRows .finding')).to_have_count(1)
+                expect(page.locator('#coverageRows')).to_contain_text('FictionalFolder/FolderRule.validationRule-meta.xml')
+                checked('native directory selection and relative-path provenance')
+            else:
+                report['unsupported'].append('Native directory input unsupported by this engine; not passed or simulated')
 
             # Deterministic async gates alter only synthetic File reads, not app modules.
             page.evaluate('''() => {
-                const read = File.prototype.text;
+                const read = File.prototype.arrayBuffer;
                 window.__readStarted = false; window.__readFinished = false;
-                File.prototype.text = function () {
+                File.prototype.arrayBuffer = function () {
                     if (!this.name.startsWith('Slow')) return read.call(this);
                     window.__readStarted = true;
                     return new Promise((resolve, reject) => { window.__releaseRead = async () => {
@@ -230,18 +312,29 @@ def main():
             assert not report['console_errors'], report['console_errors']
             checked('no nonstatic/network API attempts, external assets, storage, cookies, service workers, caches or JS errors')
             page.screenshot(path=str(out / 'final-state.png'), full_page=True)
-            report['runtime_sha256'] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT / 'index.html', *sorted((ROOT / 'src').glob('*.js'))]}
-            report['limitations'] = ['Chromium only; no Firefox/WebKit installed.', 'Synthetic inputs only; not an org/schema or compliance assessment.', 'Controlled File API gates/exceptions supplement native input/download scenarios.', 'Independent review retains preexisting namespace-local-name matching, replacement UTF-8 decoding, and classification-vs-assessment reporting limitations.']
+            check_layout('final-layout')
+            if not args.base_url:
+                report['runtime_sha256'] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT / 'index.html', *sorted((ROOT / 'src').glob('*.js'))]}
+            report['limitations'] = ['Only the recorded engine/version and viewport were tested.', 'Synthetic inputs only; not an org/schema or compliance assessment.', 'Controlled File.arrayBuffer gates/exceptions supplement native input/download scenarios.', 'Public transport runs test deployed bytes, not local source hashes.']
             report['status'] = 'passed'
             context.close()
             browser.close()
     except Exception as error:
         report['status'] = 'failed'
         report['failure'] = str(error)
+        # Preserve boundary evidence even when a regression stops a group early.
+        try:
+            if page is not None and not page.is_closed():
+                report['privacy_at_failure'] = page.evaluate('''() => ({boundaryCalls: window.__boundaryCalls,
+                    localStorageKeys: Object.keys(localStorage), sessionStorageKeys: Object.keys(sessionStorage), cookies: document.cookie})''')
+                page.screenshot(path=str(out / 'failure-state.png'), full_page=True)
+        except Exception as evidence_error:
+            report['failure_evidence_error'] = str(evidence_error)
         raise
     finally:
-        server.shutdown()
-        server.server_close()
+        if server:
+            server.shutdown()
+            server.server_close()
         (out / 'acceptance.json').write_text(json.dumps(report, indent=2) + '\n')
         print(json.dumps({'status': report['status'], 'checks': len(report['checks']), 'report': str(out / 'acceptance.json')}))
 

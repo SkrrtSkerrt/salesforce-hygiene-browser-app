@@ -294,3 +294,84 @@ test('matching paths in different archives remain distinct accepted identities',
     ['archive:first.zip', 'first'], ['archive:second.zip', 'second'],
   ]);
 });
+
+test('selection ZIP count budget bounds actual archive reads in order', async () => {
+  let reads = 0;
+  const buffer = makeStoreZip([['one.cls', 'source']]);
+  const result = await classifyFiles(Array.from({ length: 12 }, (_, i) => ({ name: `part-${i}.zip`, size: buffer.byteLength, arrayBuffer: async () => { reads++; return buffer; } })));
+  assert.equal(reads, 10);
+  assert.equal(result.archiveTextEntries.length, 10);
+  assert.equal(result.zipUsage.archives, 10);
+  assert(result.coverage.some((row) => row.status === 'Rejected' && /selection.*archive count/i.test(row.reason)));
+});
+
+test('selection archive bytes are reserved before reading, unsafe/oversized files never read', async () => {
+  let reads = 0;
+  const tiny = makeStoreZip([['one.cls', 'source']]);
+  const files = ['first.zip', 'second.zip', 'third.zip'].map((name) => ({ name, size: 10 * 1024 * 1024, arrayBuffer: async () => { reads++; return tiny; } }));
+  files.unshift({ name: '../unsafe.zip', size: 1, arrayBuffer: async () => { throw new Error('must not read'); } });
+  files.unshift({ name: 'oversized.zip', size: 10 * 1024 * 1024 + 1, arrayBuffer: async () => { throw new Error('must not read'); } });
+  const result = await classifyFiles(files);
+  assert.equal(reads, 2);
+  assert.equal(result.zipUsage.archiveBytes, 20 * 1024 * 1024);
+});
+
+test('selection inspected-entry budget includes directories and rejects before entry parsing', async () => {
+  const directories = makeStoreZip(Array.from({ length: 200 }, (_, i) => [`folder-${i}/`, '']));
+  const result = await classifyFiles([selectedZip(directories, 'a.zip'), selectedZip(directories, 'b.zip'), selectedZip(makeStoreZip([['one.cls', 'text']]), 'c.zip')]);
+  assert.equal(result.zipUsage.entries, 400);
+  assert.deepEqual(result.archiveTextEntries, []);
+  assert(result.coverage.some((row) => /selection.*entry count/i.test(row.reason)));
+});
+
+test('selection decompressed-text budget is shared and inclusive at exact boundary', async () => {
+  const archive = makeStoreZip(Array.from({ length: 4 }, (_, i) => ({ name: `one-${i}.cls`, text: 'x'.repeat(1024 * 1024), method: 8 })));
+  const result = await classifyFiles([selectedZip(archive, 'a.zip'), selectedZip(archive, 'b.zip'), selectedZip(archive, 'c.zip')]);
+  assert.equal(result.archiveTextEntries.length, 8);
+  assert.equal(result.zipUsage.contentBytes, 8 * 1024 * 1024);
+  assert(result.coverage.some((row) => row.status === 'Not Assessed' && /selection.*content/i.test(row.reason)));
+});
+
+test('failed inflate attempts retain bounded runtime reservations across archives', async () => {
+  const bomb = makeStoreZip([{ name: 'one.cls', text: 'x'.repeat(1024 * 1024 + 1), method: 8, declaredUncompressedSize: 1 }]);
+  let attempts = 0;
+  const NativeDecompressionStream = globalThis.DecompressionStream;
+  globalThis.DecompressionStream = class extends NativeDecompressionStream {
+    constructor(format) { super(format); attempts++; }
+  };
+  try {
+    const result = await classifyFiles(Array.from({ length: 10 }, (_, i) => selectedZip(bomb, `part-${i}.zip`)));
+    assert.deepEqual(result.archiveTextEntries, []);
+    assert.equal(attempts, 8, 'only budgeted inflate attempts execute');
+    assert.equal(result.zipUsage.contentBytes, 8 * 1024 * 1024);
+    assert(result.coverage.some((row) => /selection.*content/i.test(row.reason)));
+  } finally {
+    globalThis.DecompressionStream = NativeDecompressionStream;
+  }
+});
+
+test('zero-declared ZIP members cannot inflate after archive or selection budget exhaustion', async () => {
+  const archive = makeStoreZip(Array.from({ length: 12 }, (_, i) => ({
+    name: `zero-${i}.cls`, text: 'x'.repeat(1024 * 1024 + 1), method: 8, declaredUncompressedSize: 0,
+  })));
+  const NativeDecompressionStream = globalThis.DecompressionStream;
+  let attempts = 0;
+  globalThis.DecompressionStream = class extends NativeDecompressionStream {
+    constructor(format) { super(format); attempts++; }
+  };
+  try {
+    const one = await classifyFiles([selectedZip(archive, 'one.zip')]);
+    assert.equal(attempts, 4, 'no zero-reservation inflate after per-archive exhaustion');
+    assert.equal(one.zipUsage.contentBytes, 4 * 1024 * 1024);
+    assert.deepEqual(one.archiveTextEntries, []);
+    assert(one.coverage.some((row) => row.status === 'Not Assessed' && /archive.*content/i.test(row.reason)));
+    attempts = 0;
+    const three = await classifyFiles(['a.zip', 'b.zip', 'c.zip'].map((name) => selectedZip(archive, name)));
+    assert.equal(attempts, 8, 'no zero-reservation inflate after selection exhaustion');
+    assert.equal(three.zipUsage.contentBytes, 8 * 1024 * 1024);
+    assert.deepEqual(three.archiveTextEntries, []);
+    assert(three.coverage.some((row) => row.status === 'Not Assessed' && /selection.*content/i.test(row.reason)));
+  } finally {
+    globalThis.DecompressionStream = NativeDecompressionStream;
+  }
+});

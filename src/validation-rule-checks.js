@@ -1,5 +1,7 @@
 import { readXml } from './xml-reader.js';
 
+const SALESFORCE_METADATA_NAMESPACE = 'http://soap.sforce.com/2006/04/metadata';
+
 export const VALIDATION_001_BROWSER = {
   ruleId: 'VALIDATION-001-BROWSER',
   title: 'Validation rule missing description',
@@ -15,6 +17,15 @@ export function evaluateValidationDescription({ path, source = 'selection', text
     return ruleCoverage(path, source, 'Malformed input', 'malformed-validation-rule-xml', parsed.ok ? 'XML root is not ValidationRule.' : parsed.reason, sourceRef);
   }
 
+  // Historical namespace-free metadata is explicitly supported. A foreign URI
+  // is not Salesforce metadata even when its local element name is familiar.
+  const rootNamespace = parsed.root.namespaceURI;
+  if (rootNamespace !== '' && rootNamespace !== SALESFORCE_METADATA_NAMESPACE) {
+    return ruleCoverage(path, source, 'Not Assessed', 'validation-rule-namespace-unproven', 'ValidationRule root is outside the canonical Salesforce metadata namespace or the supported namespace-free legacy format.', sourceRef);
+  }
+
+  // Count all direct local-name lookalikes before namespace filtering: a foreign
+  // field alongside a canonical field must not hide duplicate-field ambiguity.
   const descriptions = parsed.root.children.filter((node) => node.localName === 'description');
   if (descriptions.length !== 1) {
     return ruleCoverage(path, source, 'Not Assessed', descriptions.length === 0 ? 'description-field-unproven' : 'ambiguous-description-field', 'ValidationRule description is not represented by exactly one direct description element.', sourceRef);
@@ -22,6 +33,9 @@ export function evaluateValidationDescription({ path, source = 'selection', text
 
   const [description] = descriptions;
   sourceRef = buildSource(path, source, text, description.offset);
+  if (description.namespaceURI !== rootNamespace) {
+    return ruleCoverage(path, source, 'Not Assessed', 'description-namespace-unproven', 'Direct description does not share the supported ValidationRule root namespace.', sourceRef);
+  }
   if (description.hasMarkup) {
     return ruleCoverage(path, source, 'Not Assessed', 'description-content-unproven', 'ValidationRule description contains child markup or XML constructs outside the conservative browser check.', sourceRef);
   }

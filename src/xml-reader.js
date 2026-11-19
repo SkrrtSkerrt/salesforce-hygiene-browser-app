@@ -175,7 +175,11 @@ function parseXml(input) {
       if (expandedAttributes.has(expanded)) reject('XML contains duplicate expanded attribute names.');
       expandedAttributes.add(expanded);
     }
-    const node = { name, localName: splitName(name)[1], offset, text: '', hasMarkup: false, children: [], namespaces };
+    const [prefix, localName] = splitName(name);
+    // Resolve identity in this element's scope, including its own declarations.
+    // Unlike unprefixed attributes, unprefixed elements inherit the default URI.
+    const namespaceURI = namespaces[prefix] || '';
+    const node = { name, localName, namespaceURI, offset, text: '', hasMarkup: false, children: [], namespaces };
     if (parent) {
       parent.hasMarkup = true;
       parent.children.push(node);

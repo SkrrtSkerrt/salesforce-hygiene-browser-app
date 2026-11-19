@@ -11,7 +11,7 @@ export function makeZip(entries) {
     const { name, text, method = 0, flags = 0, descriptor = false,
       localExtra = new Uint8Array(), centralExtra = new Uint8Array() } = options;
     const nameBytes = encoder.encode(name);
-    const sourceBytes = encoder.encode(text);
+    const sourceBytes = options.bytes ?? encoder.encode(text);
     const dataBytes = method === 8 ? deflateRawSync(sourceBytes) : sourceBytes;
     const uncompressedSize = options.declaredUncompressedSize ?? sourceBytes.length;
     const checksum = crc32(sourceBytes);

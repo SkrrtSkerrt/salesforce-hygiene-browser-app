@@ -51,36 +51,65 @@ This gate includes classifier/ZIP, XML, scanner-contract, UI race/export, report
 publication, redaction, and static network/persistence checks. The UI VM harness
 uses Node's `--experimental-vm-modules` flag; its experimental warning is expected.
 
-Optional real-Chromium acceptance, using an already installed Python Playwright
-and Chromium (no dependency installation is performed):
+Real-browser acceptance uses Python Playwright and installed browser binaries.
+The harness does not install dependencies. Run each engine at desktop and mobile
+layout sizes:
 
 ```bash
-python tests/browser-acceptance.py --output /tmp/salesforce-browser-acceptance
+for browser in chromium firefox webkit; do
+  python tests/browser-acceptance.py --browser "$browser" --output "/tmp/salesforce-browser-acceptance/$browser-desktop"
+  python tests/browser-acceptance.py --browser "$browser" --mobile --output "/tmp/salesforce-browser-acceptance/$browser-mobile"
+done
 ```
 
-The browser harness starts an ephemeral loopback-only static server, uses fictional
-inputs, saves actual JSON/HTML Blob downloads plus a screenshot and acceptance
-report under the output directory, and stops the server on exit. It covers native
-file/folder inputs, stored/deflated ZIPs, unsafe paths, malformed inputs, stale
-completions, export eligibility, safe error recovery, and observed network/storage
-behavior. Deterministic File API gates/errors supplement native browser scenarios.
-It does not deploy or contact Salesforce. Firefox/WebKit and real customer data are
-not covered.
+The harness starts an ephemeral loopback-only static server, uses fictional inputs,
+and saves real JSON/HTML Blob downloads, hashes, screenshots, engine versions and
+acceptance/privacy evidence. It covers native file/folder inputs, stored/deflated
+ZIPs, unsafe paths, malformed/invalid UTF-8 inputs, foreign namespaces, actual
+rule-execution summaries, stale completions, export gates, safe error recovery and
+observed network/storage behavior. Controlled File API gates supplement native
+browser scenarios. Mobile means a 390×844 touch viewport, not a physical-device
+or operating-system certification. Missing engines or unsupported native controls
+are reported explicitly, never counted as passes. No real customer data is used.
 
-## Known limitations retained in this repair slice
+To run the same checks against a deployment, add
+`--base-url https://skrrtskerrt.github.io/salesforce-hygiene-browser-app/ --cache-key RELEASE_SHA`.
+Only the app's allowlisted static GETs are permitted; the harness adds cache-busting
+query strings and blocks unexpected requests. It does not deploy or contact
+Salesforce. On hosts needing compatibility libraries, isolate them outside this
+repository and scope the launcher/environment to browser tests; do not substitute
+incompatible system-library symlinks.
 
-- This is a conservative XML 1.0 subset reader, not Salesforce schema validation.
-  ASCII QNames only, bounded nesting, no DTD or XML 1.1; unsupported syntax becomes
+## Hardening contract and remaining limitations
+
+- This is a conservative XML 1.0 subset reader, not Salesforce schema validation:
+  ASCII QNames, bounded nesting, no DTD or XML 1.1. Unsupported syntax produces
   explicit coverage rather than a finding.
-- Rule field matching uses local element names, not Salesforce namespace identity.
-  Foreign-namespace lookalikes can still affect results.
-- File/ZIP text decoding can replace invalid UTF-8 bytes before XML parsing. The
-  app does not prove original byte-level XML encoding validity.
-- `Accepted` is file classification, not proof that a rule assessed that file.
-  Recognized non-ValidationRule types have no implemented content rule; the
-  `rules_evaluated` summary currently lists the enabled rule even when it did not
-  execute. Inspect per-rule coverage, not that summary alone.
-- ZIP limits are per archive, not an aggregate budget across all selected archives.
+- Roots and their direct `description` must share the canonical Salesforce
+  namespace `http://soap.sforce.com/2006/04/metadata`, or both use the explicitly
+  supported legacy empty namespace. Prefixes and inherited default namespaces are
+  resolved. Foreign/shadowed fields are Not Assessed; duplicate direct description
+  lookalikes remain ambiguous even across namespaces. Unbound prefixes are malformed.
+- Direct XML and extracted ZIP content require valid UTF-8 bytes. Read/decode
+  failures produce Not Assessed coverage and do not count as a rule execution.
+  This is not general XML encoding autodetection or full schema validation.
+- `Accepted` denotes input classification/eligibility, not a completed assessment.
+  Classification rows and rule outcomes are separate; recognized non-ValidationRule
+  metadata is Not Assessed in scan reports. `rules_evaluated` lists only invoked
+  evaluators (including invocations returning malformed/Not Assessed), and is empty
+  if none ran. `input_summary.classificationCounts` and `ruleOutcomeCounts` separate
+  classification from rule outcome counts; total coverage rows are not file counts.
+- ZIP limits apply both per archive and across the entire selection. Per archive:
+  10 MiB input, 200 directory entries, 4 MiB extracted content; per entry: 1 MiB
+  extracted content. Per selection: 10 archives read, 20 MiB input, 400 inspected
+  entries and 8 MiB extraction-work reservations. Reservations persist after
+  failed extraction so malformed input cannot reset the work budget. Archives are
+  processed in selection order; over-budget inputs receive explicit coverage.
+  `input_summary.zipUsage` exposes conservative reserved work, not exact successful
+  extraction totals. Native stream chunks are checked after receipt; these limits
+  do not prove a zero-overshoot native allocation or CPU cap. They do prevent new
+  extraction attempts once a work budget is exhausted. These ZIP limits do not
+  impose a selection-wide limit on directly selected non-ZIP files.
 - Reports omit raw XML but retain relative metadata names/paths. They are not
   anonymized and must not be posted as public feedback.
 

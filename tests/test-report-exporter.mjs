@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { buildHtmlReport, buildJsonReport, buildJsonReportText, createReportBlob, createReportFilename } from '../src/report-exporter.js';
 
+import { classifySelectedFiles } from '../src/scanner-adapter.js';
+
 const unixAbsoluteFixture = ['/', 'home', '/josh/org/objects/Account/validationRules/Fictional.validationRule-meta.xml'].join('');
 const windowsAbsoluteFixture = ['C:', '\\', 'Users', '\\Josh\\org\\objects\\Account\\validationRules\\Fictional.validationRule-meta.xml'].join('');
 
@@ -75,5 +77,13 @@ assert.equal((await htmlBlob.text()).includes('Salesforce Hygiene Local Browser 
 
 assert.equal(createReportFilename('json', new Date('2026-09-14T00:00:00.000Z')), 'salesforce-hygiene-browser-report-2026-09-14T00-00-00-000Z.json');
 assert.throws(() => createReportBlob(result, 'pdf'));
+
+const unassessedScan = await classifySelectedFiles([{ name: 'Fictional.field-meta.xml' }]);
+const unassessedReport = buildJsonReport(unassessedScan);
+assert.deepEqual(unassessedReport.rules_evaluated, []);
+assert.equal(unassessedReport.coverage[0].status, 'Not Assessed');
+assert.equal(unassessedReport.coverage[0].metadata_type, 'CustomField');
+assert(buildHtmlReport(unassessedScan).includes('Rules evaluated: none'));
+assert.deepEqual(unassessedReport.findings, []);
 
 console.log('report exporter tests passed');

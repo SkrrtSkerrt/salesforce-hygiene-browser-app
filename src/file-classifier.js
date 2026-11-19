@@ -6,10 +6,20 @@ const SUPPORTED_METADATA = [
   { kind: 'ApexTrigger', detail: 'Apex trigger source or metadata', match: (path) => path.endsWith('.trigger') || path.endsWith('.trigger-meta.xml') },
 ];
 
-const MAX_ZIP_INSPECTION_BYTES = 10 * 1024 * 1024;
-const MAX_ZIP_ENTRY_COUNT = 200;
-const MAX_ZIP_ENTRY_CONTENT_BYTES = 1024 * 1024;
-const MAX_ZIP_TOTAL_CONTENT_BYTES = 4 * 1024 * 1024;
+export const ZIP_LIMITS = Object.freeze({
+  perArchiveBytes: 10 * 1024 * 1024,
+  perArchiveEntries: 200,
+  perEntryContentBytes: 1024 * 1024,
+  perArchiveContentBytes: 4 * 1024 * 1024,
+  selectionArchives: 10,
+  selectionArchiveBytes: 20 * 1024 * 1024,
+  selectionEntries: 400,
+  selectionContentBytes: 8 * 1024 * 1024,
+});
+const MAX_ZIP_INSPECTION_BYTES = ZIP_LIMITS.perArchiveBytes;
+const MAX_ZIP_ENTRY_COUNT = ZIP_LIMITS.perArchiveEntries;
+const MAX_ZIP_ENTRY_CONTENT_BYTES = ZIP_LIMITS.perEntryContentBytes;
+const MAX_ZIP_TOTAL_CONTENT_BYTES = ZIP_LIMITS.perArchiveContentBytes;
 
 const SENSITIVE_MARKERS = [
   '.sfdx-url',
@@ -95,6 +105,9 @@ export async function classifyFiles(fileList) {
   const coverage = [];
   const archives = [];
   const archiveTextEntries = [];
+  // Reservations are selection-wide and retained on failures; rejected work
+  // cannot reset a resource allowance by moving to the next archive.
+  const zipUsage = { archives: 0, archiveBytes: 0, entries: 0, contentBytes: 0 };
 
   // Resolve identity before reading any content: no winner is chosen for duplicates.
   const selectionRows = files.map((file) => classifyPath(file.webkitRelativePath || file.name, 'selection'));
@@ -104,17 +117,42 @@ export async function classifyFiles(fileList) {
     const base = selectionRows[index];
     const relativeName = base.path;
     if (base.status === 'Archive') {
-      if (archiveSize(file) > MAX_ZIP_INSPECTION_BYTES) {
-        coverage.push(makeCoverage(relativeName, 'archive', 'Rejected', 'ZIP archive exceeds browser A7 inspection size limit'));
+      const size = archiveSize(file);
+      if (size === null || size > MAX_ZIP_INSPECTION_BYTES) {
+        coverage.push(makeCoverage(relativeName, 'archive', 'Rejected', 'ZIP archive exceeds browser A7 inspection size limit or has unavailable size'));
         continue;
       }
-      archives.push({ file, relativeName });
+      if (zipUsage.archives >= ZIP_LIMITS.selectionArchives) {
+        coverage.push(makeCoverage(relativeName, 'archive', 'Rejected', 'ZIP selection archive count limit exceeded'));
+        continue;
+      }
+      if (zipUsage.archiveBytes + size > ZIP_LIMITS.selectionArchiveBytes) {
+        coverage.push(makeCoverage(relativeName, 'archive', 'Rejected', 'ZIP selection archive byte limit exceeded'));
+        continue;
+      }
+      zipUsage.archives += 1;
+      zipUsage.archiveBytes += size;
+      archives.push({ file, relativeName, size });
     }
   }
 
   for (const archive of archives) {
     try {
       const buffer = await archive.file.arrayBuffer();
+      if (!(buffer instanceof ArrayBuffer) || buffer.byteLength > archive.size) throw new Error('ZIP byte size mismatch');
+      const view = new DataView(buffer);
+      const end = findEndOfCentralDirectory(view);
+      const count = end < 0 ? 0 : view.getUint16(end + 10, true);
+      if (count === 0xffff) throw new Error('ZIP64 archives are unsupported');
+      if (count > MAX_ZIP_ENTRY_COUNT) {
+        coverage.push(makeCoverage(archive.relativeName, 'archive', 'Rejected', `ZIP archive exceeds browser A7 entry count limit (${MAX_ZIP_ENTRY_COUNT})`));
+        continue;
+      }
+      if (zipUsage.entries + count > ZIP_LIMITS.selectionEntries) {
+        coverage.push(makeCoverage(archive.relativeName, 'archive', 'Rejected', 'ZIP selection entry count limit exceeded'));
+        continue;
+      }
+      zipUsage.entries += count;
       const entries = readZipDirectory(buffer);
       if (!entries.length) {
         coverage.push(makeCoverage(archive.relativeName, 'archive', 'Malformed input', 'ZIP archive has no readable central-directory entries'));
@@ -146,18 +184,29 @@ export async function classifyFiles(fileList) {
           coverage.push(makeCoverage(entryName.name, archiveSource, 'Not Assessed', 'ZIP entry exceeds browser A7 per-entry content limit'));
           continue;
         }
-        if (totalContentBytes + entryName.uncompressedSize > MAX_ZIP_TOTAL_CONTENT_BYTES) {
+        if (totalContentBytes >= MAX_ZIP_TOTAL_CONTENT_BYTES
+            || totalContentBytes + entryName.uncompressedSize > MAX_ZIP_TOTAL_CONTENT_BYTES) {
           coverage.push(makeCoverage(entryName.name, archiveSource, 'Not Assessed', 'ZIP archive exceeds browser A7 total extracted content limit'));
           continue;
         }
+        if (zipUsage.contentBytes >= ZIP_LIMITS.selectionContentBytes
+            || zipUsage.contentBytes + entryName.uncompressedSize > ZIP_LIMITS.selectionContentBytes) {
+          coverage.push(makeCoverage(entryName.name, archiveSource, 'Not Assessed', 'ZIP selection extracted content limit exceeded'));
+          continue;
+        }
+        const maxEntryBytes = Math.min(MAX_ZIP_ENTRY_CONTENT_BYTES, MAX_ZIP_TOTAL_CONTENT_BYTES - totalContentBytes, ZIP_LIMITS.selectionContentBytes - zipUsage.contentBytes);
+        // Charge the maximum attempted work before inflation/CRC/decoding.
+        // On failure keep the reservation (including dishonest declared sizes).
+        totalContentBytes += maxEntryBytes;
+        zipUsage.contentBytes += maxEntryBytes;
         try {
-          const maxEntryBytes = Math.min(MAX_ZIP_ENTRY_CONTENT_BYTES, MAX_ZIP_TOTAL_CONTENT_BYTES - totalContentBytes);
-          const extracted = await extractZipEntryText(buffer, entryName, { maxBytes: maxEntryBytes });
-          totalContentBytes += extracted.byteLength;
-          const text = extracted.text;
-          archiveTextEntries.push({ path: row.path, source: archiveSource, text });
+          const extracted = await extractValidatedZipEntry(buffer, entryName, maxEntryBytes);
+          totalContentBytes -= maxEntryBytes - extracted.byteLength;
+          zipUsage.contentBytes -= maxEntryBytes - extracted.byteLength;
+          archiveTextEntries.push({ path: row.path, source: archiveSource, text: extracted.text });
         } catch (error) {
-          coverage.push(makeCoverage(entryName.name, archiveSource, 'Malformed input', 'ZIP entry content could not be extracted locally'));
+          const decodingFailed = error instanceof TypeError;
+          coverage.push(makeCoverage(entryName.name, archiveSource, decodingFailed ? 'Not Assessed' : 'Malformed input', 'ZIP entry content could not be extracted or decoded locally'));
         }
       }
     } catch (error) {
@@ -165,7 +214,7 @@ export async function classifyFiles(fileList) {
     }
   }
 
-  return { ...summarizeCoverage(coverage), archiveTextEntries };
+  return { ...summarizeCoverage(coverage), archiveTextEntries, zipUsage };
 }
 
 export function summarizeCoverage(coverage) {
@@ -216,6 +265,7 @@ function readZipDirectory(input) {
   if (centralOffset + centralSize !== eocdOffset) throw new Error('Invalid ZIP central-directory bounds');
 
   const entries = [];
+  if (entryCount > MAX_ZIP_ENTRY_COUNT) throw new Error('ZIP entry count limit exceeded');
   const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   let offset = centralOffset;
   for (let index = 0; index < entryCount; index += 1) {
@@ -323,6 +373,11 @@ export async function extractZipEntryText(input, entry, { maxBytes = MAX_ZIP_ENT
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error('Invalid ZIP extraction limit');
   maxBytes = Math.min(maxBytes, MAX_ZIP_ENTRY_CONTENT_BYTES);
   if (current.uncompressedSize > maxBytes) throw new Error('ZIP entry exceeds bounded extraction limit');
+  return extractValidatedZipEntry(bytes, current, maxBytes);
+}
+
+// Internal caller already validated the entire directory and duplicate aliases.
+async function extractValidatedZipEntry(bytes, current, maxBytes) {
   const compressed = new Uint8Array(bytes, current.dataStart, current.compressedSize);
   const data = current.compressionMethod === 0
     ? copyStoredEntry(compressed, maxBytes)
@@ -330,7 +385,7 @@ export async function extractZipEntryText(input, entry, { maxBytes = MAX_ZIP_ENT
   if (data.byteLength !== current.uncompressedSize) throw new Error('ZIP entry extracted size mismatch');
   if (crc32(data) !== current.crc32) throw new Error('ZIP entry extracted CRC mismatch');
   return {
-    text: new TextDecoder('utf-8', { fatal: false }).decode(data),
+    text: new TextDecoder('utf-8', { fatal: true }).decode(data),
     byteLength: data.byteLength,
   };
 }
@@ -385,7 +440,7 @@ function makeCoverage(path, source, status, reason, metadataType = null) {
 }
 
 function archiveSize(file) {
-  return Number.isFinite(file?.size) ? file.size : 0;
+  return Number.isSafeInteger(file?.size) && file.size >= 0 ? file.size : null;
 }
 
 function isAbsoluteLikePath(value) {

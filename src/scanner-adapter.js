@@ -7,7 +7,19 @@ export async function classifySelectedFiles(fileList) {
   const ruleResults = await runBrowserRules(files, classification.coverage, classification.archiveTextEntries || []);
   const findings = ruleResults.map((result) => result.finding).filter(Boolean);
   const ruleCoverage = ruleResults.map((result) => result.coverage).filter(Boolean);
-  const coverage = [...classification.coverage, ...ruleCoverage];
+  const scanClassification = classification.coverage.map((row) => {
+    if (row.status !== 'Accepted') return row;
+    const eligible = row.metadataType === 'ValidationRule';
+    return {
+      ...row,
+      classificationStatus: 'Accepted',
+      status: eligible ? 'Accepted' : 'Not Assessed',
+      reason: eligible
+        ? 'Input classified as eligible ValidationRule metadata; see separate rule outcome coverage.'
+        : 'Recognized metadata type has no browser rule implementation.',
+    };
+  });
+  const coverage = [...scanClassification, ...ruleCoverage];
   const counts = countStatuses(coverage);
 
   return {
@@ -17,13 +29,17 @@ export async function classifySelectedFiles(fileList) {
       selectedFileCount: classification.selectedEntryCount,
       totalCoverageRows: coverage.length,
       coverageCounts: counts,
+      zipUsage: classification.zipUsage,
+      // Classification counts are not counts of assessed metadata.
+      classificationCounts: classification.counts,
+      ruleOutcomeCounts: countStatuses(ruleCoverage.filter((row) => row.ruleId)),
     },
-    rulesEvaluated: [VALIDATION_001_BROWSER.ruleId],
+    rulesEvaluated: [...new Set(ruleCoverage.map((row) => row.ruleId).filter(Boolean))],
     findings,
     coverage,
     limitations: [
       'The public beta evaluates one browser ValidationRule XML check against directly selected local files and bounded client-side ZIP entries.',
-      'Client-only bounded ZIP content extraction is limited by archive size, entry count, per-entry size, total extracted text size, and safe relative paths.',
+      'Client-only bounded ZIP content extraction has both per-archive and selection-wide budgets for archive count/bytes, inspected entries, and extracted text; only safe relative paths are eligible.',
       'Unsupported files become coverage rows instead of silent omissions.',
       VALIDATION_001_BROWSER.limitation,
     ],
@@ -69,8 +85,14 @@ async function runBrowserRules(files, coverageRows, archiveTextEntries) {
     }
     const file = byPath.get(row.path);
     if (!file) continue;
-    const text = await file.text();
-    results.push(evaluateValidationDescription({ path: row.path, source: row.source, text }));
+    try {
+      const bytes = await file.arrayBuffer();
+      if (!(bytes instanceof ArrayBuffer)) throw new TypeError('Expected file bytes');
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      results.push(evaluateValidationDescription({ path: row.path, source: row.source, text }));
+    } catch {
+      results.push({ finding: null, coverage: { path: row.path, source: row.source, metadataType: row.metadataType, status: 'Not Assessed', reasonCode: 'content-read-or-utf8-failed', reason: 'Local file bytes could not be read or decoded as strict UTF-8.' } });
+    }
   }
 
   return results;

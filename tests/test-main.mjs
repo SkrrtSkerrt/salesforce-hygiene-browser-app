@@ -28,9 +28,10 @@ function fixture(label, { delayed = false } = {}) {
   });
   const gate = deferred();
   const started = deferred();
-  file.text = () => { started.resolve(); return gate.promise; };
-  if (!delayed) gate.resolve(text);
-  return { file, started: started.promise, finish: () => gate.resolve(text) };
+  const bytes = new TextEncoder().encode(text).buffer;
+  file.arrayBuffer = () => { started.resolve(); return gate.promise; };
+  if (!delayed) gate.resolve(bytes);
+  return { file, started: started.promise, finish: () => gate.resolve(bytes) };
 }
 
 async function mount({ classify = scanner.classifySelectedFiles } = {}) {
